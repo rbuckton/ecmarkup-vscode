@@ -1,0 +1,113 @@
+{
+  "name": "ecmarkup-vscode",
+  "version": "0.0.1",
+  "displayName": "ecmarkup",
+  "description": "ecmarkup for Visual Studio Code",
+  "license": "Apache-2.0",
+  "keywords": [
+    "javascript",
+    "ecmascript"
+  ],
+  "author": {
+    "name": "Ron Buckton",
+    "email": "rbuckton@chronicles.org",
+    "url": "http://github.com/rbuckton"
+  },
+  "publisher": "rbuckton",
+  "private": true,
+  "main": "./out/client/extension",
+  "scripts": {
+    "vscode:prepublish": "gulp build",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "categories": [
+    "Languages"
+  ],
+  "activationEvents": [
+    "onCommand:extension.showEcmarkupPreview",
+    "onLanguage:ecmarkup"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.showEcmarkupPreview",
+        "title": "Show ECMArkup Preview"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "extension.showEcmarkupPreview",
+          "when": "resourceLangId == ecmarkup"
+        },
+        {
+          "command": "extension.showEcmarkupPreview",
+          "when": "resourceLangId == html"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "extension.showEcmarkupPreview",
+          "when": "resourceLangId == ecmarkup"
+        },
+        {
+          "command": "extension.showEcmarkupPreview",
+          "when": "resourceLangId == html"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "ecmarkup",
+        "aliases": [
+          "ecmarkup",
+          "emu"
+        ],
+        "filenamePatterns": [
+          "spec.html",
+          "spec.*.html",
+          "*.spec.html",
+          "*.emu.html"
+        ],
+        "configuration": "./ecmarkup.configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ecmarkup",
+        "scopeName": "source.emu",
+        "path": "./out/syntax/ecmarkup.tmLanguage"
+      }
+    ]
+  },
+  "engines": {
+    "vscode": "^0.10.7"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^3.5.27",
+    "@types/jsdom": "^2.0.28",
+    "@types/node": "^6.0.34",
+    "@types/parse5": "0.0.28",
+    "@types/source-map": "^0.1.26",
+    "@types/source-map-support": "^0.2.27",
+    "del": "^2.2.0",
+    "gulp": "^3.9.0",
+    "gulp-convert": "^0.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^2.0.0-alpha",
+    "gulp-tsb": "git://github.com/rbuckton/gulp-tsb.git#srcDestMethods",
+    "typescript": "next",
+    "vscode": "^0.10.0"
+  },
+  "dependencies": {
+    "ecmarkup": "^3.3.1",
+    "iterable-query": "^0.1.3",
+    "js-yaml": "^3.6.1",
+    "parse5": "^2.2.0",
+    "prex": "^0.2.0",
+    "source-map": "^0.5.6",
+    "source-map-support": "^0.4.2",
+    "vscode-languageclient": "^2.3.0",
+    "vscode-languageserver": "^2.2.1"
+  }
+}

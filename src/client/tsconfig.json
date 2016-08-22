@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "outDir": "../../out/client",
+        "noLib": true,
+        "sourceMap": true,
+        "rootDir": ".",
+        "typeRoots": [
+            "node_modules/@types",
+            "../../node_modules/@types"
+        ]
+    }
+}

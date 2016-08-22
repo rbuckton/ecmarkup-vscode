@@ -1,0 +1,198 @@
+---
+name: ecmarkup
+scopeName: source.emu
+fileTypes: [html]
+uuid: f7670583-cb84-4e85-b37e-4675885d7f27
+
+patterns:
+- include: '#emu-alg'
+- include: '#emu-grammar'
+- include: '#pre-metadata'
+- include: '#code-javascript'
+- include: '#code-typescript'
+- include: '#code-html'
+- include: text.html.basic
+
+repository:
+  emu-alg:
+    begin: (<)(emu-alg)\b(?=[^>]*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(emu-alg)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#emu-alg-content'
+    name: meta.tag.emu-alg.html
+
+  emu-alg-content:
+    begin: (>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+    end: (?=<\/emu-alg>)
+    patterns:
+      - include: source.md
+
+  emu-grammar:
+    begin: (<)(emu-grammar)\b(?=[^>]*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(emu-grammar)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#emu-grammar-content'
+    name: meta.tag.emu-grammar.html
+
+  emu-grammar-content:
+    begin: (>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+    end: (?=<\/emu-grammar>)
+    patterns:
+      - include: source.grammar
+
+  pre-metadata:
+    begin: (<)(pre)\b(?=\s*\bclass\s*=\s*(\bmetadata\b|'metadata'|"metadata")\s*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(pre)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#pre-metadata-content'
+    name: meta.tag.pre-metadata.html
+
+  pre-metadata-content:
+    begin: (?<=>)
+    end: (?=<\/pre>)
+    patterns:
+      - include: source.yaml
+
+  code-javascript:
+    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\bjavascript\b|'javascript'|"javascript")\s*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#code-javascript-content'
+    name: meta.tag.code-javascript.html
+
+  code-javascript-content:
+    begin: (?<=>)
+    end: (?=<\/code>)
+    patterns:
+      - include: '#cdata'
+      - include: source.ts
+
+  code-typescript:
+    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\btypescript\b|'typescript'|"typescript")\s*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#code-typescript-content'
+    name: meta.tag.code-typescript.html
+
+  code-typescript-content:
+    begin: (?<=>)
+    end: (?=<\/code>)
+    patterns:
+      - include: '#cdata'
+      - include: source.ts
+
+  code-html:
+    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\bhtml\b|'html'|"html")\s*>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.html }
+      '2': { name: entity.name.tag.html }
+      '3': { name: punctuation.definition.tag.html }
+    patterns:
+      - include: '#attributes'
+      - include: '#code-html-content'
+    name: meta.tag.code-html.html
+
+  code-html-content:
+    begin: (?<=>)
+    end: (?=<\/code>)
+    patterns:
+      - include: text.html.basic
+
+  attributes:
+    end: (?=>)
+    patterns:
+      - include: '#tag-generic-attribute'
+      - include: '#string-double-quoted'
+      - include: '#string-single-quoted'
+      - include: '#entities'
+
+  tag-generic-attribute:
+    match: (?<=[^=])\b([a-zA-Z0-9:-]+)
+    name: entity.other.attribute-name.html
+
+  string-double-quoted:
+    begin: '"'
+    beginCaptures:
+      '0': { name: punctuation.definition.string.begin.html }
+    end: '"'
+    endCaptures:
+      '0': { name: punctuation.definition.string.end.html }
+    name: string.quoted.double.html
+    patterns:
+      - include: '#entities'
+
+  string-single-quoted:
+    begin: "'"
+    beginCaptures:
+      '0': { name: punctuation.definition.string.begin.html }
+    end: "'"
+    endCaptures:
+      '0': { name: punctuation.definition.string.end.html }
+    name: string.quoted.single.html
+    patterns:
+      - include: '#entities'
+
+  entities:
+    patterns:
+      - match: '(&)([a-zA-Z0-9]+|#[0-9]+|#x[0-9a-fA-F]+)(;)'
+        captures:
+          '1': { name: punctuation.definition.entity.html }
+          '3': { name: punctuation.definition.entity.html }
+        name: constant.character.entity.html
+      - match: '&'
+        name: invalid.illegal.bad-ampersand.html
+  cdata:
+    patterns:
+      - match: <!\[CDATA\[
+        name: punctuation.definition.tag.html
+      - match: \]\]>
+        name: punctuation.definition.tag.html
+...
