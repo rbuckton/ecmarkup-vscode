@@ -1,5 +1,4 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "typescript.tsserver.trace": "messages"
+    "typescript.tsdk": "node_modules/typescript/lib"
 }
