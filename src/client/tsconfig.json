@@ -5,10 +5,6 @@
         "outDir": "../../out/client",
         "noLib": true,
         "sourceMap": true,
-        "rootDir": ".",
-        "typeRoots": [
-            "node_modules/@types",
-            "../../node_modules/@types"
-        ]
+        "typeRoots": ["../../node_modules/@types"]
     }
 }

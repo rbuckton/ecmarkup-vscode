@@ -1,6 +1,7 @@
 import { TextDocument, TextDocumentIdentifier, Position, Location, Range } from "vscode-languageserver";
 import { SourceMap, SourceRange, SourcePosition } from "./sourceMap";
 import { TextDocumentWithSourceMap } from "./textDocument";
+import { EOL } from "os";
 
 const newLinePattern = /\r?\n/g;
 
@@ -75,7 +76,7 @@ export class StringWriter {
 
     public writeln() {
         if ((this._line > 0 || this._character > 0)) {
-            this._text += "\n";
+            this._text += EOL;
             this._line++;
             this._character = 0;
 

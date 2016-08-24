@@ -1,5 +1,7 @@
 import { Position } from "vscode-languageserver";
 import { SourcePosition } from "./sourceMap";
+import * as url from "url";
+import * as path from "path";
 
 export namespace Is {
     export function isMissing(value: any): value is undefined | null {
@@ -40,6 +42,47 @@ export namespace Is {
     export function isNumber(value: any): value is number {
         return typeof value === "number";
     }
+}
+
+export function isMissing(value: any): value is undefined | null {
+    return value === undefined
+        || value === null;
+}
+
+export function isMissingOr<T>(is: (value: any) => value is T, value: any): value is T | undefined | null {
+    return value === undefined
+        || value === null
+        || is(value);
+}
+
+export function isDefined<T>(value: T | undefined | null): value is T {
+    return value !== undefined
+        && value !== null;
+}
+
+export function isDefinedAnd<T>(is: (value: any) => value is T, value: any): value is T {
+    return value !== undefined
+        && value !== null
+        && is(value);
+}
+
+export function isObject<T>(value: T | string | number | boolean | undefined | null): value is T;
+export function isObject(value: any): boolean;
+export function isObject(value: any): boolean {
+    return value !== null
+        && typeof value === "object";
+}
+
+export function isFunction(value: any): value is Function {
+    return typeof value === "function";
+}
+
+export function isString(value: any): value is string {
+    return typeof value === "string";
+}
+
+export function isNumber(value: any): value is number {
+    return typeof value === "number";
 }
 
 export class ArraySet<T> {
@@ -206,12 +249,43 @@ export function comparePositions(x: Position, y: Position) {
         || compareValues(x.character, y.character);
 }
 
-export function compareIndices<T>(x: T, y: T, indices: Map<T, number>) {
-    return compareValues(indices.get(x), indices.get(y));
+export function isUrl(value: string) {
+    const parsed = url.parse(value);
+    return !!parsed.protocol && !path.isAbsolute(value);
 }
 
-export function compareSourcePositions(x: SourcePosition, y: SourcePosition, sources: Map<string, number>, names: Map<string, number>) {
-    return compareIndices(x.uri, y.uri, sources)
-        || comparePositions(x.position, y.position)
-        || compareIndices(x.name, y.name, names);
+export function isFileUrl(value: string) {
+    const parsed = url.parse(value);
+    return parsed.protocol === "file:";
+}
+
+export function toUrl(value: string, referer?: string) {
+    if (path.isAbsolute(value)) {
+        value = normalizeSlashes(value).split(/\//g).map(encodeURIComponent).join("/");
+        return url.format({ protocol: "file:", slashes: true, pathname: value });
+    }
+
+    return referer ? url.resolve(referer, value) : value;
+}
+
+export function toLocalPath(value: string) {
+    if (path.isAbsolute(value)) {
+        return value;
+    }
+
+    const parsed = url.parse(value);
+    if (parsed.protocol === "file:") {
+        const pathname = decodeURIComponent(parsed.pathname);
+        return /^[\\/][a-z]:/i.test(pathname) ? pathname.slice(1) : pathname;
+    }
+
+    return undefined;
+}
+
+export function normalizeSlashes(text: string) {
+    return text.replace(/\\/g, "/");
+}
+
+export function ensureTrailingSeparator(text: string) {
+    return /[\\/]$/.test(text) ? text : text + "/";
 }

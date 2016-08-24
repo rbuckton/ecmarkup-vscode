@@ -1,16 +1,24 @@
 import { TextDocument, Range, Position } from "vscode-languageserver";
-import { SourceMap, SourcePosition, Bias } from "./sourceMap";
-import { LineMap, Position as LineCharacter } from "grammarkdown";
-import { StringWriter } from "./writer";
 import { TextDocumentWithSourceMap } from "./textDocument";
+import { SourceMap, SourcePosition, Bias } from "./sourceMap";
+import { StringWriter } from "./writer";
+import { ASTNode, ElementLocationInfo } from "parse5";
+import { Query } from "iterable-query";
 
 const entityPattern = /&(?:([a-zA-Z0-9]+)|#([0-9]+)|#x([0-9a-fA-F]+));/g;
 const newLinePattern = /\r?\n/g;
 const blankLinePattern = /^(\s*)$/;
 const leadingWhitespacePattern = /^\s*(?=[^\s])/;
+const ASTNodeHierarchy = {
+    parent(node: ASTNode) { return node.parentNode; },
+    children(node: ASTNode) { return node.childNodes; }
+};
 
 /** Extract fragment, normalize new-lines, and remove leading indentation */
-export function extractFragment(textDocument: TextDocument | TextDocumentWithSourceMap, start: number, end: number) {
+export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, node: ASTNode) {
+    const location = <ElementLocationInfo>node.__location;
+    const start = location.startTag.endOffset;
+    const end = location.endTag.startOffset;
     const sourceText = textDocument.getText();
     const source = textDocument.uri;
     const sourceMap = new SourceMap({ file: source });
@@ -85,6 +93,19 @@ export function extractFragment(textDocument: TextDocument | TextDocumentWithSou
     }
 
     return TextDocumentWithSourceMap.create(source, textDocument.languageId, textDocument.version, writer.toString(), sourceMap);
+}
+
+export function hasAttribute(node: ASTNode, name: string) {
+    return !!node.attrs && !!node.attrs.find(attr => attr.name === name);
+}
+
+export function getAttribute(node: ASTNode, name: string) {
+    const attr = node.attrs && node.attrs.find(attr => attr.name === name);
+    return attr ? attr.value : undefined;
+}
+
+export function hierarchy(node: ASTNode) {
+    return Query.hierarchy(node, ASTNodeHierarchy);
 }
 
 // /** Decode HTML */
