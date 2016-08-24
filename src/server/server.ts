@@ -9,7 +9,7 @@ import { DocumentManager, SpecDocument, GrammarDocument } from "./documents";
 
 export class Server {
     private connection: IConnection;
-    private workspaceRoot: string;
+    // private workspaceRoot: string;
     private grammar: gmd.Grammar;
     private openDocuments: TextDocuments;
     private documentManager: DocumentManager;
@@ -34,7 +34,7 @@ export class Server {
     }
 
     private onInitialize(params: InitializeParams): InitializeResult {
-        this.workspaceRoot = utils.ensureTrailingSeparator(utils.normalizeSlashes(params.rootPath));
+        //this.workspaceRoot = params.rootPath && utils.ensureTrailingSeparator(utils.normalizeSlashes(params.rootPath));
         return {
             capabilities: {
                 textDocumentSync: this.openDocuments.syncKind,
@@ -55,7 +55,7 @@ export class Server {
                 const resolver = grammar.resolver;
                 const navigator = resolver.createNavigator(sourceFile);
                 const generatedPosition = TextDocumentWithSourceMap.generatedPositionFor(grammarDocument, SourcePosition.create(uri, position));
-                if (navigator.moveToPosition(generatedPosition) && navigator.moveToName()) {
+                if (generatedPosition && navigator.moveToPosition(generatedPosition) && navigator.moveToName()) {
                     declarations = resolver.getDeclarations(<gmd.Identifier>navigator.getNode());
                 }
 
@@ -82,7 +82,7 @@ export class Server {
                 const resolver = grammar.resolver;
                 const navigator = resolver.createNavigator(sourceFile);
                 const generatedPosition = TextDocumentWithSourceMap.generatedPositionFor(grammarDocument, SourcePosition.create(uri, position));
-                if (navigator.moveToPosition(generatedPosition) && navigator.moveToName()) {
+                if (generatedPosition && navigator.moveToPosition(generatedPosition) && navigator.moveToName()) {
                     references = resolver.getReferences(<gmd.Identifier>navigator.getNode());
                 }
 

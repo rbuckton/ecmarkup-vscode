@@ -5,194 +5,372 @@ fileTypes: [html]
 uuid: f7670583-cb84-4e85-b37e-4675885d7f27
 
 patterns:
-- include: '#emu-alg'
-- include: '#emu-grammar'
-- include: '#pre-metadata'
-- include: '#code-javascript'
-- include: '#code-typescript'
-- include: '#code-html'
-- include: text.html.basic
+- include: '#emu'
 
 repository:
-  emu-alg:
-    begin: (<)(emu-alg)\b(?=[^>]*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(emu-alg)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
+  emu:
     patterns:
-      - include: '#attributes'
-      - include: '#emu-alg-content'
-    name: meta.tag.emu-alg.html
-
-  emu-alg-content:
-    begin: (>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-    end: (?=<\/emu-alg>)
-    patterns:
-      - include: source.md
-
-  emu-grammar:
-    begin: (<)(emu-grammar)\b(?=[^>]*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(emu-grammar)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
-    patterns:
-      - include: '#attributes'
-      - include: '#emu-grammar-content'
-    name: meta.tag.emu-grammar.html
-
-  emu-grammar-content:
-    begin: (>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-    end: (?=<\/emu-grammar>)
-    patterns:
-      - include: source.grammar
-
-  pre-metadata:
-    begin: (<)(pre)\b(?=\s*\bclass\s*=\s*(\bmetadata\b|'metadata'|"metadata")\s*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(pre)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
-    patterns:
-      - include: '#attributes'
-      - include: '#pre-metadata-content'
-    name: meta.tag.pre-metadata.html
-
-  pre-metadata-content:
-    begin: (?<=>)
-    end: (?=<\/pre>)
-    patterns:
-      - include: source.yaml
-
-  code-javascript:
-    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\bjavascript\b|'javascript'|"javascript")\s*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(code)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
-    patterns:
-      - include: '#attributes'
-      - include: '#code-javascript-content'
-    name: meta.tag.code-javascript.html
-
-  code-javascript-content:
-    begin: (?<=>)
-    end: (?=<\/code>)
-    patterns:
-      - include: '#cdata'
-      - include: source.ts
-
-  code-typescript:
-    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\btypescript\b|'typescript'|"typescript")\s*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(code)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
-    patterns:
-      - include: '#attributes'
-      - include: '#code-typescript-content'
-    name: meta.tag.code-typescript.html
-
-  code-typescript-content:
-    begin: (?<=>)
-    end: (?=<\/code>)
-    patterns:
-      - include: '#cdata'
-      - include: source.ts
-
-  code-html:
-    begin: (<)(code)\b(?=\s*\bclass\s*=\s*(\bhtml\b|'html'|"html")\s*>)
-    beginCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-    end: (<\/)(code)(>)
-    endCaptures:
-      '1': { name: punctuation.definition.tag.html }
-      '2': { name: entity.name.tag.html }
-      '3': { name: punctuation.definition.tag.html }
-    patterns:
-      - include: '#attributes'
-      - include: '#code-html-content'
-    name: meta.tag.code-html.html
-
-  code-html-content:
-    begin: (?<=>)
-    end: (?=<\/code>)
-    patterns:
+      - include: '#emu-intro'
+      - include: '#emu-clause'
+      - include: '#emu-annex'
+      - include: '#emu-alg'
+      - include: '#emu-eqn'
+      - include: '#emu-note'
+      - include: '#emu-grammar'
+      - include: '#pre-metadata'
+      - include: '#pre-code'
+      - include: '#emd-inline'
       - include: text.html.basic
 
+  emu-intro:
+    begin: (<)(emu-intro)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-intro)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emu']
+    name: meta.emu-intro.emu
+
+  emu-clause:
+    begin: (<)(emu-clause)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-clause)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emu']
+    name: meta.emu-clause.emu
+
+  emu-annex:
+    begin: (<)(emu-annex)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-annex)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emu']
+    name: meta.emu-annex.emu
+
+  emu-alg:
+    begin: (<)(emu-alg)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-alg)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emd']
+    name: meta.emu-alg.emu
+
+  emu-eqn:
+    begin: (<)(emu-eqn)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-eqn)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emu']
+    name: meta.emu-eqn.emu
+
+  emu-note:
+    begin: (<)(emu-note)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-note)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emu']
+    name: meta.emu-note.emu
+
+  emu-grammar:
+    begin: (<)(emu-grammar)\b([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(emu-grammar)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: source.grammar]
+    name: meta.emu-grammar.emu
+
+  pre-metadata:
+    begin: (<)(pre)\b(?=\s*\bclass\s*=\s*(\bmetadata\b|'metadata'|"metadata")\s*>)([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(pre)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: source.yaml]
+    name: meta.pre-metadata.emu
+
+  pre-code:
+    patterns:
+      - include: '#code-javascript'
+      - include: '#code-typescript'
+      - include: '#code-html'
+      - match: (<\/?)(pre)\b([^>]*)(>)
+        captures:
+          '1': { name: punctuation.definition.tag.emu }
+          '2': { name: entity.name.tag.emu }
+          '3': { patterns: [include: '#attributes'] }
+          '4': { name: punctuation.definition.tag.emu }
+    name: meta.pre.emu
+
+  code-javascript:
+    begin: (<)(code)\b([^>]*\bjavascript\b[^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: source.ts]
+    name: meta.code.emu
+
+  code-typescript:
+    begin: (<)(code)\b([^>]*\btypescript\b[^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: source.ts]
+    name: meta.code.emu
+
+  code-html:
+    begin: (<)(code)\b([^>]*\bhtml\b[^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(code)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: text.html.basic]
+    name: meta.code.html
+
+  emd:
+    patterns:
+      - include: '#emd-ordered-list'
+      - include: '#emd-unordered-list'
+      - include: '#emd-inline'
+      - include: '#emd-ins'
+      - include: '#emd-del'
+      - include: '#emu-grammar'
+      - include: '#pre-code'
+      - match: ([A-Z][a-z]+([A-Z][a-z]+)+)
+        name: entity.name.class.emu
+
+  emd-ordered-list:
+    match: ^\s*(\d+\.)\s(?=\S)
+    name: markup.list.numbered.emu
+
+  emd-unordered-list:
+    match: ^\s*([*+-])([ ]{1,3}|\t)(?!\s)
+    name: markup.list.unnumbered.emu
+
+  emd-inline:
+    patterns:
+      - include: '#emd-val'
+      - include: '#emd-var'
+      - include: '#emd-code'
+      - include: '#emd-const'
+      - include: '#emd-nonterminal'
+      - include: '#emd-op'
+      - include: '#emd-slot'
+      - include: '#emd-builtin'
+      - include: '#keyphrases'
+
+  emd-val:
+    match: (\*)(\w+)(\*)
+    captures:
+      '1': { name: punctuation.definition.bold.emu }
+      '2': { patterns: [include: '#emd-inline'] }
+      '3': { name: punctuation.definition.bold.emu }
+    name: markup.bold.emu
+
+  emd-var:
+    match: (_)(\w+)(_)
+    captures:
+      '1': { name: punctuation.definition.italic.emu }
+      '2': { patterns: [include: '#emd-inline'] }
+      '3': { name: punctuation.definition.italic.emu }
+    name: variable.other.emu
+
+  emd-code:
+    match: (`)([^`]*)(`)
+    captures:
+      '1': { name: punctuation.definition.raw.emu }
+      '2': { patterns: [include: '#emd-inline'] }
+      '3': { name: punctuation.definition.raw.emu }
+    name: markup.raw.inline.emu
+
+  emd-const:
+    match: (\~)(\w+)(\~)
+    captures:
+      '1': { name: punctuation.definition.const.emu }
+      '2': { patterns: [include: '#emd-inline'] }
+      '3': { name: punctuation.definition.const.emu }
+    name: meta.selector.emu
+
+  emd-nonterminal:
+    match: (\|)(\w+)(?:(\[)([^\]]*)(\]))?(\|)
+    captures:
+      '1': { name: variable.other.nonterminal.markup.italic.emu }
+      '2': { name: variable.other.nonterminal.markup.italic.emu }
+      '3': { name: punctuation.definition.arguments.emu }
+      '4': { patterns: [include: '#emd-argument'] }
+      '5': { name: punctuation.definition.arguments.emu }
+      '6': { name: variable.other.nonterminal.markup.italic.emu }
+    name: markup.nonterminal.inline.markdown
+
+  emd-argument:
+    match: \b(\w+)\b
+    captures:
+      '1': { name: variable.parameter.emu }
+
+  emd-builtin:
+    match: (%[^%]*%)
+    captures:
+      '1': { name: entity.name.class.emu }
+
+  emd-slot:
+    match: (\[\[)(\w+)(\]\])
+    captures:
+      '1': { name: punctuation.definition.tag.slot.emu }
+      '2': { name: annotation.storage.type.emu }
+      '3': { name: punctuation.definition.tag.slot.emu }
+
+  emd-op:
+    match: \b(\w+)(?=\()
+    captures:
+      '1': { name: entity.name.function.emu }
+
+  emd-ins:
+    begin: (<)(ins)([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(ins)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emd-inline']
+
+  emd-del:
+    begin: (<)(del)([^>]*)(>)
+    beginCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    end: (<\/)(del)(>)
+    endCaptures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { name: punctuation.definition.tag.emu }
+    patterns: [include: '#emd-inline']
+
   attributes:
-    end: (?=>)
     patterns:
       - include: '#tag-generic-attribute'
       - include: '#string-double-quoted'
       - include: '#string-single-quoted'
       - include: '#entities'
 
-  tag-generic-attribute:
-    match: (?<=[^=])\b([a-zA-Z0-9:-]+)
-    name: entity.other.attribute-name.html
+    repository:
+      tag-generic-attribute:
+        match: (?<=[^=])\b([a-zA-Z0-9:-]+)
+        name: entity.other.attribute-name.emu
 
-  string-double-quoted:
-    begin: '"'
-    beginCaptures:
-      '0': { name: punctuation.definition.string.begin.html }
-    end: '"'
-    endCaptures:
-      '0': { name: punctuation.definition.string.end.html }
-    name: string.quoted.double.html
-    patterns:
-      - include: '#entities'
+      string-double-quoted:
+        begin: '"'
+        beginCaptures:
+          '0': { name: punctuation.definition.string.begin.emu }
+        end: '"'
+        endCaptures:
+          '0': { name: punctuation.definition.string.end.emu }
+        name: string.quoted.double.emu
+        patterns:
+          - include: '#entities'
 
-  string-single-quoted:
-    begin: "'"
-    beginCaptures:
-      '0': { name: punctuation.definition.string.begin.html }
-    end: "'"
-    endCaptures:
-      '0': { name: punctuation.definition.string.end.html }
-    name: string.quoted.single.html
-    patterns:
-      - include: '#entities'
+      string-single-quoted:
+        begin: "'"
+        beginCaptures:
+          '0': { name: punctuation.definition.string.begin.emu }
+        end: "'"
+        endCaptures:
+          '0': { name: punctuation.definition.string.end.emu }
+        name: string.quoted.single.emu
+        patterns:
+          - include: '#entities'
 
   entities:
     patterns:
       - match: '(&)([a-zA-Z0-9]+|#[0-9]+|#x[0-9a-fA-F]+)(;)'
         captures:
-          '1': { name: punctuation.definition.entity.html }
-          '3': { name: punctuation.definition.entity.html }
-        name: constant.character.entity.html
+          '1': { name: punctuation.definition.entity.emu }
+          '3': { name: punctuation.definition.entity.emu }
+        name: constant.character.entity.emu
       - match: '&'
-        name: invalid.illegal.bad-ampersand.html
-  cdata:
-    patterns:
-      - match: <!\[CDATA\[
-        name: punctuation.definition.tag.html
-      - match: \]\]>
-        name: punctuation.definition.tag.html
+        name: invalid.illegal.bad-ampersand.emu
+
+  keyphrases:
+    match: \b(running execution context|Record|EnvironmentRecord)\b
+    captures:
+      '1': { name: entity.name.class.emu }
 ...

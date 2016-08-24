@@ -321,11 +321,22 @@ export class SpecDocument extends DocumentBase {
             this._htmlDocument = parse(textDocument.getText(), { locationInfo: true });
 
             // parse metadata
-            this._metadata = html.hierarchy(this._htmlDocument)
-                .descendants(node => node.nodeName === "pre" && html.getAttribute(node, "class") === "metadata")
-                .select(node => html.extractContent(textDocument, node))
-                .select(fragment => yaml.load(fragment.getText(), { filename: fragment.uri }))
-                .first() || {};
+            try {
+                this._metadata = html.hierarchy(this._htmlDocument)
+                    .descendants(node => node.nodeName === "pre" && html.getAttribute(node, "class") === "metadata")
+                    .select(node => html.extractContent(textDocument, node))
+                    .select(fragment => yaml.safeLoad(fragment.getText(), <any>{
+                        filename: fragment.uri,
+                        onWarning: (content: string) => {
+                            this.trace(`yaml parse error: ${content}`);
+                        }
+                    }))
+                    .first() || {};
+            }
+            catch (e) {
+                // recover from errors parsing YAML
+                this.trace(`error parsing YAML: ${e.stack}`);
+            }
 
             // parse grammar
             this._grammarDocument = this.documentManager.grammarDocuments.addOrUpdate(this.uri, this);

@@ -7,8 +7,8 @@ const tsb = require("gulp-tsb");
 const del = require("del");
 
 // projecs
-const client = tsb.create("src/client");
-const server = tsb.create("src/server");
+const client = tsb.create("src/client", { typescript: require("typescript") });
+const server = tsb.create("src/server", { typescript: require("typescript") });
 
 gulp.task("clean", () => del(["out/**/*"]));
 

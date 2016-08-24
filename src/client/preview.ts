@@ -20,6 +20,8 @@ export function activate(context: ExtensionContext) {
 
 class EcmarkupTextDocumentContentProvider implements TextDocumentContentProvider {
     private _onDidChange = new EventEmitter<Uri>();
+    private _lastPreviewFile: string;
+    private _lastPreviewContent: string;
 
     public get onDidChange() { return this._onDidChange.event; }
 
@@ -30,7 +32,20 @@ class EcmarkupTextDocumentContentProvider implements TextDocumentContentProvider
             return `<body>ECMArkup Preview is only valid for HTML documents.</body>`;
         }
 
-        return build(document.fileName, fetch, { copyright: false, toc: false }).then(processSpec);
+        return build(document.fileName, fetch, { copyright: false, toc: false })
+            .then(processSpec)
+            .then(
+                content => {
+                    this._lastPreviewFile = document.fileName;
+                    this._lastPreviewContent = content;
+                    return content;
+                }, e => {
+                    if (this._lastPreviewFile === document.fileName) {
+                        return this._lastPreviewContent;
+                    }
+
+                    return `<body>An error occurred: <pre>${e.message}</pre></body>`;
+                });
 
         function fetch(file: string) {
             return new Promise<string>((resolve, reject) => {
