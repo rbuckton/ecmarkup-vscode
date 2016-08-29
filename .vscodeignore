@@ -1,0 +1,11 @@
+.vscode
+.vscode/**/*
+.vscodeignore
+.gitignore
+node_modules/.bin
+node_modules/.bin/**/*
+node_modules/@types
+node_modules/@types/**/*
+src
+src/**/*
+gulpfile.js

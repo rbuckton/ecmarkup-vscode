@@ -157,7 +157,7 @@ class EcmarkupDocumentContentProvider implements TextDocumentContentProvider {
                             this._pendingUpdates.delete(key);
                         }
 
-                        const doc = spec.doc;
+                        const doc = (<any>spec).doc as HTMLDocument;
                         doc.head.insertAdjacentHTML("afterBegin", `<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />`);
                         doc.head.insertAdjacentHTML("beforeEnd", `<link rel="stylesheet" href="${require.resolve("ecmarkup/css/elements.css")}" />`);
                         doc.head.insertAdjacentHTML("beforeEnd", `<link rel="stylesheet" href="${require.resolve("../../resources/preview.css")}" />`);
