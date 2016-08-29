@@ -1,40 +1,41 @@
-import { IConnection, TextDocument, TextDocuments, InitializeParams, InitializeResult, TextDocumentChangeEvent, TextDocumentPositionParams, Definition, ReferenceParams, Location, Range, Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { IConnection, TextDocument, TextDocuments, InitializeParams, InitializeResult, TextDocumentChangeEvent, TextDocumentPositionParams, Definition, ReferenceParams, Location, Range, Diagnostic, DiagnosticSeverity, DidChangeConfigurationParams } from "vscode-languageserver";
 import { TextDocumentWithSourceMap } from "./textDocument";
-import { parse as parseHtml, ASTNode, LocationInfo, ElementLocationInfo } from "parse5";
 import { SourcePosition, Bias } from "./sourceMap";
+import { DocumentManager, SpecDocument, GrammarDocument } from "./documents";
 import * as utils from "./utils";
 import * as gmd from "grammarkdown";
 
-import { DocumentManager, SpecDocument, GrammarDocument } from "./documents";
-
 export class Server {
     private connection: IConnection;
-    // private workspaceRoot: string;
     private grammar: gmd.Grammar;
     private openDocuments: TextDocuments;
     private documentManager: DocumentManager;
+    private traceLevel: "none" | "client" | "server" | "all";
 
     constructor() {
         this.openDocuments = new TextDocuments();
-        this.openDocuments.onDidChangeContent(change => this.onDidChangeContent(change.document));
-        this.openDocuments.onDidClose(change => this.onDidClose(change.document));
+        this.openDocuments.onDidChangeContent(params => this.onDidChangeContent(params));
+        this.openDocuments.onDidClose(params => this.onDidClose(params));
 
         this.documentManager = new DocumentManager();
         this.documentManager.specDocuments.on("documentAdded", () => this.grammar = undefined);
         this.documentManager.specDocuments.on("documentDeleted", () => this.grammar = undefined);
+        this.documentManager.grammarDocuments.on("documentAdded", () => this.grammar = undefined);
+        this.documentManager.grammarDocuments.on("documentDeleted", () => this.grammar = undefined);
     }
 
     public listen(connection: IConnection) {
         this.connection = connection;
         this.connection.onInitialize(params => this.onInitialize(params));
+        this.connection.onDidChangeConfiguration(params => this.onDidChangeConfiguration(params));
         this.connection.onDefinition(params => this.onDefinition(params));
         this.connection.onReferences(params => this.onReferences(params));
         this.openDocuments.listen(connection);
         this.documentManager.listen(connection);
+        this.trace(`server started`);
     }
 
-    private onInitialize(params: InitializeParams): InitializeResult {
-        //this.workspaceRoot = params.rootPath && utils.ensureTrailingSeparator(utils.normalizeSlashes(params.rootPath));
+    private onInitialize({ }: InitializeParams): InitializeResult {
         return {
             capabilities: {
                 textDocumentSync: this.openDocuments.syncKind,
@@ -44,9 +45,54 @@ export class Server {
         };
     }
 
+    private onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
+        this.traceLevel = settings.ecmarkup.trace || "none";
+    }
+
+    private onDidChangeContent({ document }: TextDocumentChangeEvent) {
+        try {
+            const specDocument = this.documentManager.specDocuments.addOrUpdate(document.uri, document);
+            if (!specDocument.ready) {
+                specDocument
+                    .waitForReady()
+                    .then(
+                        () => {
+                            this.checkDocument(document);
+                        },
+                        (e) => {
+                            this.checkDocument(document);
+                            this.trace(`error: ${e.stack}`);
+                        });
+                return;
+            }
+
+            this.checkDocument(document);
+        }
+        catch (e) {
+            this.trace(`error: ${e.stack}`);
+        }
+    }
+
+    private onDidClose({ document }: TextDocumentChangeEvent) {
+        try {
+            switch (document.languageId) {
+                case "ecmarkup":
+                case "html":
+                    this.documentManager.specDocuments.delete(document.uri);
+                    break;
+
+                case "grammarkdown":
+                    this.documentManager.grammarDocuments.delete(document.uri);
+                    break;
+            }
+        }
+        catch (e) {
+            this.trace(`error: ${e.stack}`);
+        }
+    }
+
     private onDefinition({ textDocument: { uri }, position }: TextDocumentPositionParams) {
         try {
-            this.trace(`go to definition...`);
             let declarations: (gmd.SourceFile | gmd.Production | gmd.Parameter)[];
             const grammar = this.getGrammar();
             const grammarDocument = this.documentManager.grammarDocuments.get(uri).textDocument;
@@ -61,8 +107,6 @@ export class Server {
 
                 return this.getLocationsOfNodes(declarations, resolver);
             }
-
-            this.trace(`no textDocument for grammar: ${uri}`);
         }
         catch (e) {
             this.trace(`error: ${e.stack}`);
@@ -73,7 +117,6 @@ export class Server {
 
     private onReferences({ textDocument: { uri }, position }: ReferenceParams) {
         try {
-            this.trace(`find references...`);
             let references: gmd.Node[];
             const grammar = this.getGrammar();
             const grammarDocument = this.documentManager.grammarDocuments.get(uri).textDocument;
@@ -88,8 +131,6 @@ export class Server {
 
                 return this.getLocationsOfNodes(references, resolver);
             }
-
-            this.trace(`no textDocument for grammar: ${uri}`);
         }
         catch (e) {
             this.trace(`error: ${e.stack}`);
@@ -98,49 +139,9 @@ export class Server {
         return [];
     }
 
-    private onDidChangeContent(textDocument: TextDocument) {
-        try {
-            this.trace(`detected change in '${textDocument.uri}'...`);
-            const specDocument = this.documentManager.specDocuments.addOrUpdate(textDocument.uri, textDocument);
-            if (!specDocument.ready) {
-                specDocument
-                    .waitForReady()
-                    .then(() => this.checkDocument(textDocument), () => this.checkDocument(textDocument));
-                return;
-            }
-
-            this.checkDocument(textDocument);
-        }
-        catch (e) {
-            this.trace(`error: ${e.stack}`);
-        }
-    }
-
-    private onDidClose(textDocument: TextDocument) {
-        try {
-            switch (textDocument.languageId) {
-                case "ecmarkup":
-                case "html":
-                    this.documentManager.specDocuments.delete(textDocument.uri);
-                    this.documentManager.grammarDocuments.delete(textDocument.uri);
-                    this.grammar = undefined;
-                    break;
-
-                case "grammarkdown":
-                    this.documentManager.grammarDocuments.delete(textDocument.uri);
-                    this.grammar = undefined;
-                    break;
-            }
-        }
-        catch (e) {
-            this.trace(`error: ${e.stack}`);
-        }
-    }
-
     private checkDocument(textDocument: TextDocument) {
         const diagnostics: Diagnostic[] = [];
         this.checkGrammar(textDocument, diagnostics);
-        this.trace(`sending ${diagnostics.length} '${textDocument.uri}' diagnostics...`);
         this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
     }
 
@@ -148,7 +149,6 @@ export class Server {
         const grammar = this.getGrammar();
         const grammarFile = grammar.getSourceFile(textDocument.uri);
 
-        this.trace(`checking '${textDocument.uri}' grammar...`);
         grammar.check(grammarFile);
 
         // traverse diagnostics
@@ -175,23 +175,11 @@ export class Server {
                 const options: gmd.CompilerOptions = {};
                 const host: gmd.Host = {
                     normalizeFile: utils.toUrl,
-                    resolveFile: (file, referer) => {
-                        // switch (file.toLowerCase()) {
-                        //     case "es6":
-                        //     case "es2015":
-                        //         return toUrl(path.join(__dirname, "../../grammars/es2015.grammar"));
-                        // }
-
-                        return utils.toUrl(file, referer);
-                    },
+                    resolveFile: (file, referer) => utils.toUrl(file, referer),
                     readFile: file => this.readGrammarFile(file),
-                    writeFile: (file, content) => {}
+                    writeFile: (file, content) => { }
                 };
-
-                this.trace(`creating grammar for ${rootNames}...`);
                 this.grammar = new gmd.Grammar(rootNames, options, host);
-
-                this.trace(`binding grammar...`);
                 this.grammar.bind();
             }
             catch (e) {
@@ -204,15 +192,8 @@ export class Server {
     }
 
     private readGrammarFile(file: string) {
-        this.trace(`reading grammar '${file}'...`);
         const textDocument = this.documentManager.grammarDocuments.get(file).textDocument;
-        const text = textDocument ? textDocument.getText() : undefined;
-        this.trace(`grammar '${file}' ${textDocument ? "found" : "missing"}.`);
-        return text;
-    }
-
-    private parseHtmlDocument(textDocument: TextDocument) {
-        return parseHtml(textDocument.getText(), { locationInfo: true });
+        return textDocument ? textDocument.getText() : undefined;
     }
 
     private getLocationsOfNodes(nodes: gmd.Node[], resolver: gmd.Resolver) {
@@ -234,11 +215,14 @@ export class Server {
                 }
             }
         }
+
         return locations;
     }
 
     private trace(message: string) {
-        console.log(message);
-        this.connection.console.log(`ecmarkup-vscode-server: ${message}`);
+        if (this.traceLevel === "server" || this.traceLevel === "all") {
+            console.log(message);
+            this.connection.console.log(`ecmarkup-vscode-server: ${message}`);
+        }
     }
 }

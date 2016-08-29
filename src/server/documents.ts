@@ -4,6 +4,8 @@ import { ASTNode, ElementLocationInfo, parse } from "parse5";
 import { Deferred, CountdownEvent, CancellationToken, CancellationTokenSource } from "prex";
 import { fetchString } from "./fetch";
 import { EventEmitter } from "events";
+import { parseSpec } from "./parser";
+import { Query } from "iterable-query";
 import * as html from "./html";
 import * as utils from "./utils";
 import * as yaml from "js-yaml";
@@ -22,6 +24,7 @@ export class DocumentManager {
 
     constructor() {
         this._specDocuments = new SpecDocuments(this);
+        this._specDocuments.on("documentDeleted", document => { this._grammarDocuments.delete(document.uri); });
         this._grammarDocuments = new GrammarDocuments(this);
     }
 
@@ -32,7 +35,8 @@ export class DocumentManager {
         this._connection = connection;
     }
 
-    /*@internal*/ trace(message: string) {
+    /*@internal*/
+    trace(message: string) {
         if (this._connection) {
             this._connection.console.log(`ecmarkup-vscode-documentmanager: ${message}`);
         }
@@ -257,9 +261,10 @@ export abstract class DocumentBase {
 
 export class SpecDocument extends DocumentBase {
     private _textDocument: TextDocument;
-    private _htmlDocument: ASTNode;
-    private _grammarDocument: GrammarDocument;
     private _metadata: any;
+    private _metadataDocument: TextDocumentWithSourceMap;
+    private _grammarDocument: TextDocumentWithSourceMap;
+    // private _htmlDocument: ASTNode;
     private _cts: CancellationTokenSource;
 
     constructor(documents: DocumentManager, source: string | TextDocument) {
@@ -274,8 +279,9 @@ export class SpecDocument extends DocumentBase {
     }
 
     public get textDocument() { return this._textDocument; }
-    public get htmlDocument() { return this._htmlDocument; }
     public get metadata() { return this._metadata; }
+    public get metadataDocument() { return this._metadataDocument; }
+    public get grammarDocument() { return this._grammarDocument; }
 
     public abort() {
         if (this._cts) {
@@ -318,43 +324,62 @@ export class SpecDocument extends DocumentBase {
     private continueWithTextDocument(textDocument: TextDocument) {
         try {
             this._textDocument = textDocument;
-            this._htmlDocument = parse(textDocument.getText(), { locationInfo: true });
 
-            // parse metadata
-            try {
-                this._metadata = html.hierarchy(this._htmlDocument)
-                    .descendants(node => node.nodeName === "pre" && html.getAttribute(node, "class") === "metadata")
-                    .select(node => html.extractContent(textDocument, node))
-                    .select(fragment => yaml.safeLoad(fragment.getText(), <any>{
-                        filename: fragment.uri,
-                        onWarning: (content: string) => {
-                            this.trace(`yaml parse error: ${content}`);
-                        }
-                    }))
-                    .first() || {};
-            }
-            catch (e) {
-                // recover from errors parsing YAML
-                this.trace(`error parsing YAML: ${e.stack}`);
-            }
+            // parse metadata and extract grammar
+            const { links, metadata, metadataDocument, grammarDocument } = parseSpec(textDocument);
+            this._metadata = metadata;
+            this._metadataDocument = metadataDocument;
+            this._grammarDocument = grammarDocument;
+
+            // this._htmlDocument = parse(textDocument.getText(), { locationInfo: true });
+
+            // // parse metadata
+            // try {
+            //     this._metadata = html.hierarchy(this._htmlDocument)
+            //         .descendants(node => node.nodeName === "pre" && html.getAttribute(node, "class") === "metadata")
+            //         .select(node => html.extractContent(textDocument, node))
+            //         .select(fragment => yaml.safeLoad(fragment.getText(), <any>{
+            //             filename: fragment.uri,
+            //             onWarning: (content: string) => {
+            //                 this.trace(`yaml parse error: ${content}`);
+            //             }
+            //         }))
+            //         .first() || {};
+            // }
+            // catch (e) {
+            //     // recover from errors parsing YAML
+            //     this.trace(`error parsing YAML: ${e.stack}`);
+            // }
 
             // parse grammar
-            this._grammarDocument = this.documentManager.grammarDocuments.addOrUpdate(this.uri, this);
+            this.documentManager.grammarDocuments.addOrUpdate(this.uri, this);
 
             // parse imports
+
             const resolveSpec = (href: string) => knownSpecs.has(href) ? knownSpecs.get(href) : href;
-            const getDocument = (node: ASTNode) =>
-                html.getAttribute(node, "rel") === "spec" ? this.documentManager.specDocuments.get(utils.toUrl(resolveSpec(html.getAttribute(node, "href")), this.uri)) :
-                html.getAttribute(node, "rel") === "grammar" ? this.documentManager.grammarDocuments.get(utils.toUrl(html.getAttribute(node, "href"), this.uri)) :
+            const getDocument = (rel: string, href: string) =>
+                rel === "spec" ? this.documentManager.specDocuments.get(utils.toUrl(resolveSpec(href), this.uri)) :
+                rel === "grammar" ? this.documentManager.grammarDocuments.get(utils.toUrl(href, this.uri)) :
                 undefined;
 
-            const imports = html.hierarchy(this._htmlDocument)
-                .descendants(node => node.nodeName === "link"
-                    && html.hasAttribute(node, "rel")
-                    && html.hasAttribute(node, "href"))
-                .select(node => ({ node, document: getDocument(node) }))
+            // const getDocument = (rel: string, href: string) =>
+            //     html.getAttribute(node, "rel") === "spec" ? this.documentManager.specDocuments.get(utils.toUrl(resolveSpec(html.getAttribute(node, "href")), this.uri)) :
+            //     html.getAttribute(node, "rel") === "grammar" ? this.documentManager.grammarDocuments.get(utils.toUrl(html.getAttribute(node, "href"), this.uri)) :
+            //     undefined;
+
+            const imports = Query
+                .from(links)
+                .select(({ rel, href, location }) => ({ document: getDocument(rel, href), location }))
                 .where(({ document }) => document !== undefined)
                 .toArray();
+
+            // const imports = html.hierarchy(this._htmlDocument)
+            //     .descendants(node => node.nodeName === "link"
+            //         && html.hasAttribute(node, "rel")
+            //         && html.hasAttribute(node, "href"))
+            //     .select(node => ({ node, document: getDocument(node) }))
+            //     .where(({ document }) => document !== undefined)
+            //     .toArray();
 
             const pendingImports = imports
                 .filter(({ document }) => !document.ready);
@@ -369,7 +394,7 @@ export class SpecDocument extends DocumentBase {
             }
             else {
                 const remainingImports = new CountdownEvent(pendingImports.length);
-                for (const { node, document } of pendingImports) {
+                for (const { location, document } of pendingImports) {
                     // TODO: handle deferred failed imports
                     document
                         .waitForReady()
@@ -459,13 +484,8 @@ export class GrammarDocument extends DocumentBase {
 
     private continueWithSpecDocument(specDocument: SpecDocument) {
         try {
-            const fragments = getGrammarNodes(specDocument.htmlDocument, specDocument.metadata.grammar === "strict")
-                .map(node => html.extractContent(specDocument.textDocument, node));
-
-            const textDocument = TextDocumentWithSourceMap.concat(specDocument.uri, "grammarkdown", 0, fragments);
-            this._textDocument = textDocument;
+            this._textDocument = specDocument.grammarDocument;
             this._specDocument = specDocument;
-
             if (specDocument.ready) {
                 this.setReady();
             }
@@ -481,10 +501,10 @@ export class GrammarDocument extends DocumentBase {
     }
 }
 
-function getGrammarNodes(document: ASTNode, strict?: boolean) {
-    return html
-        .hierarchy(document)
-        .descendants(node => node.nodeName === "emu-grammar"
-            && strict ? !html.hasAttribute(node, "relaxed") : html.hasAttribute(node, "strict"))
-        .toArray();
-}
+// function getGrammarNodes(document: ASTNode, strict?: boolean) {
+//     return html
+//         .hierarchy(document)
+//         .descendants(node => node.nodeName === "emu-grammar"
+//             && strict ? !html.hasAttribute(node, "relaxed") : html.hasAttribute(node, "strict"))
+//         .toArray();
+// }

@@ -2,6 +2,7 @@
 name: ecmarkup
 scopeName: source.emu
 fileTypes: [html]
+firstLineMatch: ^<!(doctype|DOCTYPE)\s+ecmarkup
 uuid: f7670583-cb84-4e85-b37e-4675885d7f27
 
 patterns:
@@ -17,10 +18,10 @@ repository:
       - include: '#emu-eqn'
       - include: '#emu-note'
       - include: '#emu-grammar'
+      - include: '#emd-inline'
       - include: '#pre-metadata'
       - include: '#pre-code'
-      - include: '#emd-inline'
-      - include: text.html.basic
+      - include: '#html'
 
   emu-intro:
     begin: (<)(emu-intro)\b([^>]*)(>)
@@ -128,7 +129,7 @@ repository:
     name: meta.emu-grammar.emu
 
   pre-metadata:
-    begin: (<)(pre)\b(?=\s*\bclass\s*=\s*(\bmetadata\b|'metadata'|"metadata")\s*>)([^>]*)(>)
+    begin: (<)(pre)\b([^>]*\bmetadata\b[^>]*)(>)
     beginCaptures:
       '1': { name: punctuation.definition.tag.emu }
       '2': { name: entity.name.tag.emu }
@@ -140,7 +141,7 @@ repository:
       '2': { name: entity.name.tag.emu }
       '3': { name: punctuation.definition.tag.emu }
     patterns: [include: source.yaml]
-    name: meta.pre-metadata.emu
+    name: meta.pre.emu
 
   pre-code:
     patterns:
@@ -197,8 +198,51 @@ repository:
       '1': { name: punctuation.definition.tag.emu }
       '2': { name: entity.name.tag.emu }
       '3': { name: punctuation.definition.tag.emu }
-    patterns: [include: text.html.basic]
-    name: meta.code.html
+    patterns: [include: '#html']
+    name: meta.code.emu
+
+  html:
+    patterns:
+      - include: '#html-tag'
+      - include: '#html-comment'
+      - include: '#html-doctype'
+      - include: '#html-cdata'
+      - include: text.html.basic
+
+  html-tag:
+    match: (<\/?)([A-Za-z0-9:]+)([^>]*)(>)
+    captures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    name: meta.any-tag.emu
+
+  html-comment:
+    begin: <!--
+    beginCaptures:
+      '0': { name: punctuation.definition.comment.emu }
+    end: --\s*>
+    endCaptures:
+      '0': { name: punctuation.definition.comment.emu }
+    name: comment.block.emu
+    patterns:
+      - match: --
+        name: invalid.illegal.bad-comments-or-CDATA.html
+
+  html-doctype:
+    match: (?i)(<!)(doctype)([^>]*)(>)
+    captures:
+      '1': { name: punctuation.definition.tag.emu }
+      '2': { name: entity.name.tag.doctype.emu }
+      '3': { patterns: [include: '#attributes'] }
+      '4': { name: punctuation.definition.tag.emu }
+    name: meta.tag.sgml.doctype.emu
+
+  html-cdata:
+    begin: "<!\[CDATA\["
+    end: "\]\]>"
+    name: constant.other.inline-data.html
 
   emd:
     patterns:
@@ -328,36 +372,39 @@ repository:
   attributes:
     patterns:
       - include: '#tag-generic-attribute'
-      - include: '#string-double-quoted'
-      - include: '#string-single-quoted'
+      - include: '#string'
       - include: '#entities'
 
-    repository:
-      tag-generic-attribute:
-        match: (?<=[^=])\b([a-zA-Z0-9:-]+)
-        name: entity.other.attribute-name.emu
+  tag-generic-attribute:
+    match: (?<=[^=])\b([a-zA-Z0-9:-]+)
+    name: entity.other.attribute-name.emu
 
-      string-double-quoted:
-        begin: '"'
-        beginCaptures:
-          '0': { name: punctuation.definition.string.begin.emu }
-        end: '"'
-        endCaptures:
-          '0': { name: punctuation.definition.string.end.emu }
-        name: string.quoted.double.emu
-        patterns:
-          - include: '#entities'
+  string:
+    patterns:
+      - include: '#string-double-quoted'
+      - include: '#string-single-quoted'
 
-      string-single-quoted:
-        begin: "'"
-        beginCaptures:
-          '0': { name: punctuation.definition.string.begin.emu }
-        end: "'"
-        endCaptures:
-          '0': { name: punctuation.definition.string.end.emu }
-        name: string.quoted.single.emu
-        patterns:
-          - include: '#entities'
+  string-double-quoted:
+    begin: '"'
+    beginCaptures:
+      '0': { name: punctuation.definition.string.begin.emu }
+    end: '"'
+    endCaptures:
+      '0': { name: punctuation.definition.string.end.emu }
+    name: string.quoted.double.emu
+    patterns:
+      - include: '#entities'
+
+  string-single-quoted:
+    begin: "'"
+    beginCaptures:
+      '0': { name: punctuation.definition.string.begin.emu }
+    end: "'"
+    endCaptures:
+      '0': { name: punctuation.definition.string.end.emu }
+    name: string.quoted.single.emu
+    patterns:
+      - include: '#entities'
 
   entities:
     patterns:

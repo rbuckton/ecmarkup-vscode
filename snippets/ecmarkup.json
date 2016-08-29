@@ -1,0 +1,123 @@
+{
+    "Insert emu-intro": {
+        "prefix": "<emu-intro",
+        "body": [
+            "<emu-intro id=\"${1:id}\"$2>",
+            "\t<h1>${3}</h1>",
+            "\t<p>$0</p>",
+            "</emu-intro>"
+        ],
+        "description": "Inserts an emu-intro element"
+    },
+    "Insert emu-clause": {
+        "prefix": "<emu-clause",
+        "body": [
+            "<emu-clause id=\"${1:id}\"$2>",
+            "\t<h1>${3}</h1>",
+            "\t<p>$0</p>",
+            "</emu-clause>"
+        ],
+        "description": "Inserts an emu-clause element"
+    },
+    "Insert emu-annex": {
+        "prefix": "<emu-annex",
+        "body": [
+            "<emu-annex id=\"${1:id}\"$2>",
+            "\t<h1>${3}</h1>",
+            "\t<p>$0</p>",
+            "</emu-annex>"
+        ],
+        "description": "Inserts an emu-annex element"
+    },
+    "Insert emu-alg": {
+        "prefix": "<emu-alg",
+        "body": [
+            "<emu-alg$1>",
+            "\t1. $0",
+            "</emu-alg>"
+        ],
+        "description": "Inserts an emu-alg element"
+    },
+    "Insert emu-eqn": {
+        "prefix": "<emu-eqn",
+        "body": [
+            "<emu-eqn aoid=\"${1}\"$2>",
+            "\t$0",
+            "</emu-eqn>"
+        ],
+        "description": "Inserts an emu-eqn element"
+    },
+    "Insert emu-note": {
+        "prefix": "<emu-note",
+        "body": [
+            "<emu-note>",
+            "\t$0",
+            "</emu-note>"
+        ],
+        "description": "Inserts an emu-note element"
+    },
+    "Insert emu-xref": {
+        "prefix": "<emu-xref",
+        "body": [
+            "<emu-xref${1: href=\"$2\"}>$3</emu-xref>$0"
+        ],
+        "description": "Inserts an emu-xref element"
+    },
+    "Insert emu-figure": {
+        "prefix": "<emu-figure",
+        "body": [
+            "<emu-figure$1>",
+            "\t<emu-caption>${2:Figure ${3:1}}</emu-caption>",
+            "\t$0",
+            "</emu-figure>"
+        ],
+        "description": "Inserts an emu-figure element"
+    },
+    "Insert emu-table": {
+        "prefix": "<emu-table",
+        "body": [
+            "<emu-table$1>",
+            "\t<emu-caption>${2:Table ${3:1}}</emu-caption>",
+            "\t<table>",
+            "\t\t<tr><th>${4:Column 1}</th><th>${5:Column 2}</th></tr>",
+            "\t\t<tr><td>$0</td><td></td></tr>",
+            "\t</table>",
+            "</emu-table>"
+        ],
+        "description": "Inserts an emu-table element"
+    },
+    "Insert emu-example": {
+        "prefix": "<emu-example",
+        "body": [
+            "<emu-example${1: caption=\"$2\"}>",
+            "\t$0",
+            "</emu-example>"
+        ],
+        "description": "Inserts an emu-example element"
+    },
+    "Insert emu-biblio": {
+        "prefix": "<emu-biblio",
+        "body": [
+            "<emu-biblio${1: href=\"$2\"}></emu-biblio>$0"
+        ],
+        "description": "Inserts an emu-biblio element"
+    },
+    "Insert emu-grammar": {
+        "prefix": "<emu-grammar",
+        "body": [
+            "<emu-grammar$1>",
+            "\t$0",
+            "</emu-grammar>"
+        ],
+        "description": "Inserts an emu-grammar element"
+    },
+    "Insert emu-production": {
+        "prefix": "<emu-production",
+        "body": [
+            "<emu-production name=\"$1\"$2>",
+            "\t$0",
+            "</emu-production>"
+        ],
+        "description": "Inserts an emu-production element"
+    }
+}

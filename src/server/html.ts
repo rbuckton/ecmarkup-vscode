@@ -15,10 +15,11 @@ const ASTNodeHierarchy = {
 };
 
 /** Extract fragment, normalize new-lines, and remove leading indentation */
-export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, node: ASTNode) {
-    const location = <ElementLocationInfo>node.__location;
-    const start = location.startTag.endOffset;
-    const end = location.endTag.startOffset;
+export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, node: ASTNode): TextDocumentWithSourceMap;
+export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, startOffset: number, endOffset: number): TextDocumentWithSourceMap;
+export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, nodeOrStart: ASTNode | number, endOffset?: number) {
+    const start = typeof nodeOrStart === "number" ? nodeOrStart : (<ElementLocationInfo>nodeOrStart.__location).startTag.endOffset;
+    const end = typeof nodeOrStart === "number" ? endOffset : (<ElementLocationInfo>nodeOrStart.__location).endTag.startOffset;
     const sourceText = textDocument.getText();
     const source = textDocument.uri;
     const sourceMap = new SourceMap({ file: source });

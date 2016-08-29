@@ -1,5 +1,5 @@
 {
-  "name": "ecmarkup-vscode",
+  "name": "ecmarkup",
   "version": "0.0.1",
   "displayName": "ecmarkup",
   "description": "ecmarkup for Visual Studio Code",
@@ -24,52 +24,27 @@
     "Languages"
   ],
   "activationEvents": [
-    "onCommand:extension.showEcmarkupPreview",
-    "onLanguage:ecmarkup"
+    "onCommand:ecmarkup.showPreview",
+    "onCommand:ecmarkup.showPreviewToSide",
+    "onCommand:ecmarkup.showSource",
+    "onLanguage:ecmarkup",
+    "onLanguage:html"
   ],
   "contributes": {
-    "commands": [
-      {
-        "command": "extension.showEcmarkupPreview",
-        "title": "Show ECMArkup Preview"
-      }
-    ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "extension.showEcmarkupPreview",
-          "when": "resourceLangId == ecmarkup"
-        },
-        {
-          "command": "extension.showEcmarkupPreview",
-          "when": "resourceLangId == html"
-        }
-      ],
-      "editor/context": [
-        {
-          "command": "extension.showEcmarkupPreview",
-          "when": "resourceLangId == ecmarkup"
-        },
-        {
-          "command": "extension.showEcmarkupPreview",
-          "when": "resourceLangId == html"
-        }
-      ]
-    },
     "languages": [
       {
         "id": "ecmarkup",
         "aliases": [
+          "HTML (ecmarkup)",
+          "Ecmarkup",
           "ecmarkup",
           "emu"
         ],
+        "firstLine": "^<!(doctype|DOCTYPE)\\s+ecmarkup",
         "filenamePatterns": [
-          "spec.html",
-          "spec.*.html",
-          "*.spec.html",
-          "*.emu.html"
+          "*spec*.html"
         ],
-        "configuration": "./ecmarkup.configuration.json"
+        "configuration": "./ecmarkup.language-configuration.json"
       }
     ],
     "grammars": [
@@ -78,10 +53,102 @@
         "scopeName": "source.emu",
         "path": "./out/syntax/ecmarkup.tmLanguage"
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "ecmarkup.showPreview",
+        "title": "%ecmarkup.showPreview.title%",
+        "category": "%ecmarkup.category%",
+        "icon": {
+          "light": "resources/showPreview-light.svg",
+          "dark": "resources/showPreview-dark.svg"
+        }
+      },
+      {
+        "command": "ecmarkup.showPreviewToSide",
+        "title": "%ecmarkup.showPreviewToSide.title%",
+        "category": "%ecmarkup.category%",
+        "icon": {
+          "light": "resources/showPreviewToSide-light.svg",
+          "dark": "resources/showPreviewToSide-dark.svg"
+        }
+      },
+      {
+        "command": "ecmarkup.showSource",
+        "title": "%ecmarkup.showSource.title%",
+        "category": "%ecmarkup.category%",
+        "icon": {
+          "light": "resources/showSource-light.svg",
+          "dark": "resources/showSource-dark.svg"
+        }
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceLangId == ecmarkup",
+          "command": "ecmarkup.showPreview",
+          "alt": "ecmarkup.showPreviewToSide",
+          "group": "navigation"
+        },
+        {
+          "when": "resourceScheme == ecmarkup-preview",
+          "command": "ecmarkup.showSource",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceLangId == ecmarkup",
+          "command": "ecmarkup.showPreviewToSide",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceLangId == ecmarkup",
+          "command": "ecmarkup.showPreview",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "ecmarkup.showPreview",
+        "key": "shift+ctrl+v",
+        "mac": "shift+cmd+v"
+      },
+      {
+        "command": "ecmarkup.showPreviewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ecmarkup",
+        "path": "./snippets/ecmarkup.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Ecmarkup",
+      "properties": {
+        "ecmarkup.styles": {
+          "type": ["array"],
+          "default": [],
+          "description": "A list of URLs or local paths to CSS style sheets to use from the ecmarkup preview."
+        },
+        "ecmarkup.trace": {
+          "type": "string",
+          "default": "none",
+          "description": "Enabled diagnostic tracing for the extension. One of 'none', 'client', 'server', 'all'."
+        }
+      }
+    }
   },
   "engines": {
-    "vscode": "^0.10.7"
+    "vscode": "^1.4.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.5.27",
@@ -99,7 +166,6 @@
     "typescript": "next"
   },
   "dependencies": {
-    "@types/ecmarkup": "^3.3.1",
     "ecmarkup": "^3.3.1",
     "iterable-query": "^0.1.3",
     "js-yaml": "^3.6.1",
@@ -110,5 +176,8 @@
     "vscode": "0.11.17",
     "vscode-languageclient": "2.3.0",
     "vscode-languageserver": "2.2.1"
-  }
+  },
+  "extensionDependencies": [
+    "rbuckton.grammarkdown-language"
+  ]
 }
