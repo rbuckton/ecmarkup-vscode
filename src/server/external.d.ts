@@ -90,8 +90,6 @@ declare module "parse5/lib/tokenizer" {
             type: typeof HIBERNATION_TOKEN;
         }
 
-        type Token = StartTagToken | EndTagToken | CommentToken | DoctypeToken | CharacterToken | EOFToken | HibernationToken;
-
         namespace MODE {
             const DATA: "DATA_STATE";
             const RCDATA: "RCDATA_STATE";
@@ -100,6 +98,8 @@ declare module "parse5/lib/tokenizer" {
             const PLAINTEXT: "PLAINTEXT_STATE";
         }
 
+        type Token = StartTagToken | EndTagToken | CommentToken | DoctypeToken | CharacterToken | EOFToken | HibernationToken;
+        type TokenType = typeof START_TAG_TOKEN | typeof END_TAG_TOKEN | typeof COMMENT_TOKEN | typeof DOCTYPE_TOKEN | typeof CHARACTER_TOKEN | typeof WHITESPACE_CHARACTER_TOKEN | typeof NULL_CHARACTER_TOKEN | typeof EOF_TOKEN | typeof HIBERNATION_TOKEN;
         type MODE = typeof MODE.DATA | typeof MODE.RCDATA | typeof MODE.RAWTEXT | typeof MODE.SCRIPT_DATA | typeof MODE.PLAINTEXT;
     }
 

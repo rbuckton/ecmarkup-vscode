@@ -1,6 +1,7 @@
 import { Location, Range, Position } from "vscode-languageserver";
 import { StartOfSourceMap, SourceMapConsumer, SourceMapGenerator, MappingItem } from "source-map";
-import { Is, binarySearch, ArraySet, SortedList, compareValues } from "./utils";
+import { Is, binarySearch, ArraySet, SortedList, compareValues, formatPosition, formatRange } from "./utils";
+import * as utils from "./utils";
 
 declare module "source-map" {
     interface SourceMapGenerator {
@@ -45,7 +46,7 @@ export namespace SourcePosition {
 
     export function format(position: SourcePosition) {
         return position
-            ? `${position.uri}:${position.position.line + 1}:${position.position.character + 1}`
+            ? `${position.uri}:${formatPosition(position.position)}${position.name ? `#${position.name}` : `` }`
             : undefined;
     }
 
@@ -65,25 +66,37 @@ export interface SourceRange {
 export namespace SourceRange {
     export function create(uri: string, range: Range): SourceRange;
     export function create(uri: string, start: Position, end: Position): SourceRange;
-    export function create(uri: string, rangeOrStart: Range | Position, end?: Position): SourceRange {
+    export function create(uri: string, startLine: number, startCharacter: number, endLine: number, endCharacter: number): SourceRange;
+    export function create(uri: string, ...args: (Range | Position | number)[]): SourceRange {
         let range: Range;
         if (typeof uri !== "string") throw new Error("invalid argument: uri");
-        if (arguments.length >= 3) {
-            if (!Position.is(rangeOrStart)) throw new Error("invalid argument: start");
-            if (!Position.is(end)) throw new Error("invalid argument: end");
-            range = Range.create(rangeOrStart, end);
+        if (args.length === 4) {
+            const [startLine, startCharacter, endLine, endCharacter] = args;
+            if (!utils.isNumber(startLine)) throw new TypeError("invalid argument: startLine");
+            if (!utils.isNumber(startCharacter)) throw new TypeError("invalid argument: startCharacter");
+            if (!utils.isNumber(endLine)) throw new TypeError("invalid argument: endLine");
+            if (!utils.isNumber(endCharacter)) throw new TypeError("invalid argument: endCharacter");
+            return { uri, range: Range.create(startLine, startCharacter, endLine, endCharacter) };
+        }
+        else if (args.length === 2) {
+            const [start, end] = args;
+            if (!Position.is(start)) throw new TypeError("invalid argument: start");
+            if (!Position.is(end)) throw new TypeError("invalid argument: end");
+            return { uri, range: Range.create(start, end) };
+        }
+        else if (args.length === 1) {
+            const [range] = args;
+            if (!Range.is(range)) throw new TypeError("invalid argument: range");
+            return { uri, range };
         }
         else {
-            if (!Range.is(rangeOrStart)) throw new Error("invalid argument: range");
-            range = rangeOrStart;
+            throw new TypeError("argument expected");
         }
-
-        return { uri, range };
     }
 
     export function format(position: SourceRange) {
         return position
-            ? `${position.uri}:${position.range.start.line + 1}:${position.range.start.character + 1}-${position.range.end.line + 1}:${position.range.end.character + 1}`
+            ? `${position.uri}:${formatRange(position.range)}`
             : undefined;
     }
 
@@ -142,15 +155,15 @@ export class SourceMap {
     private _reader: SourceMapConsumer;
     private _sources: ArraySet<string>;
     private _names: ArraySet<string>;
-    private _generatedMappings: SortedList<IndexedMapping>;
-    private _sourceMappings: SortedList<IndexedMapping>;
+    private _generatedMappings: SortedList<IndexedMapping, IndexedMapping>;
+    private _sourceMappings: SortedList<IndexedMapping, IndexedMapping>;
 
     constructor(header: StartOfSourceMap) {
         this._header = header;
         this._writer = new SourceMapGenerator(header);
         this._sources = new ArraySet<string>();
         this._names = new ArraySet<string>();
-        this._generatedMappings = new SortedList<IndexedMapping>((x, y) =>
+        this._generatedMappings = new SortedList<IndexedMapping, IndexedMapping>(x => x, (x, y) =>
             compareValues(x.generatedLine, y.generatedLine)
             || compareValues(x.generatedCharacter, y.generatedCharacter)
             || compareValues(x.sourceIndex, y.sourceIndex)
@@ -158,7 +171,7 @@ export class SourceMap {
             || compareValues(x.sourceCharacter, y.sourceCharacter)
             || compareValues(x.nameIndex, y.nameIndex));
 
-        this._sourceMappings = new SortedList<IndexedMapping>((x, y) =>
+        this._sourceMappings = new SortedList<IndexedMapping, IndexedMapping>(x => x, (x, y) =>
             compareValues(x.sourceIndex, y.sourceIndex)
             || compareValues(x.sourceLine, y.sourceLine)
             || compareValues(x.sourceCharacter, y.sourceCharacter)

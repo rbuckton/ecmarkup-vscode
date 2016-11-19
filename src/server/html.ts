@@ -1,39 +1,33 @@
 import { TextDocument, Range, Position } from "vscode-languageserver";
 import { TextDocumentWithSourceMap } from "./textDocument";
-import { SourceMap, SourcePosition, Bias } from "./sourceMap";
+import { SourceMap, SourcePosition, SourceRange, Bias } from "./sourceMap";
 import { StringWriter } from "./writer";
-import { ASTNode, ElementLocationInfo } from "parse5";
-import { Query } from "iterable-query";
+import { comparePositions } from "./utils";
 
 const entityPattern = /&(?:([a-zA-Z0-9]+)|#([0-9]+)|#x([0-9a-fA-F]+));/g;
 const newLinePattern = /\r?\n/g;
 const blankLinePattern = /^(\s*)$/;
 const leadingWhitespacePattern = /^\s*(?=[^\s])/;
-const ASTNodeHierarchy = {
-    parent(node: ASTNode) { return node.parentNode; },
-    children(node: ASTNode) { return node.childNodes; }
-};
 
 /** Extract fragment, normalize new-lines, and remove leading indentation */
-export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, node: ASTNode): TextDocumentWithSourceMap;
-export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, startOffset: number, endOffset: number): TextDocumentWithSourceMap;
-export function extractContent(textDocument: TextDocument | TextDocumentWithSourceMap, nodeOrStart: ASTNode | number, endOffset?: number) {
-    const start = typeof nodeOrStart === "number" ? nodeOrStart : (<ElementLocationInfo>nodeOrStart.__location).startTag.endOffset;
-    const end = typeof nodeOrStart === "number" ? endOffset : (<ElementLocationInfo>nodeOrStart.__location).endTag.startOffset;
-    const sourceText = textDocument.getText();
+export function extractContent(uri: string, languageId: string, version: number, textDocument: TextDocument, start: number | Position, end: number | Position) {
     const source = textDocument.uri;
-    const sourceMap = new SourceMap({ file: source });
-    const startPosition = textDocument.positionAt(start);
-    const endPosition = textDocument.positionAt(end);
-    const indentation = getIndentation(sourceText.slice(start, end));
-    const writer = new StringWriter({ sourceMap, source });
+    const sourceText = textDocument.getText();
+    const sourceMap = new SourceMap({ file: uri });
+    const startPosition = Position.is(start) ? start : textDocument.positionAt(start);
+    const startOffset = Position.is(start) ? textDocument.offsetAt(start) : start;
+    const endPosition = Position.is(end) ? end : textDocument.positionAt(end);
+    const endOffset = Position.is(end) ? textDocument.offsetAt(end) : end;
+    const indentation = guessIndentation(sourceText.slice(startOffset, endOffset));
 
+    const writer = new StringWriter({ sourceMap, source });
     let position = startPosition;
     while (comparePositions(position, endPosition) < 0) {
         const nextPosition = minPosition(Position.create(position.line + 1, 0), endPosition);
 
         // get the line start, past the leading indentation
-        const lineStart = textDocument.offsetAt(position) + indentation;
+        const rawLineStart = textDocument.offsetAt(position);
+        const lineStart = rawLineStart + indentation;
 
         // get the line end, before any trailing line terminator.
         let lineEnd = textDocument.offsetAt(nextPosition);
@@ -56,29 +50,34 @@ export function extractContent(textDocument: TextDocument | TextDocumentWithSour
                     const charCode = name
                         ? entities.hasOwnProperty(name) ? entities[name] : NaN
                         : dec ? parseInt(dec) : parseInt(hex, 16);
+
                     if (!isNaN(charCode)) {
                         if (match.index > lastIndex) {
-                            writer.write(line.slice(lastIndex, match.index), Range.create(
-                                textDocument.positionAt(lineStart + lastIndex),
-                                textDocument.positionAt(lineStart + match.index)));
+                            writer.write(line.slice(lastIndex, match.index), SourceRange.create(
+                                source,
+                                position.line, position.character + indentation + lastIndex,
+                                position.line, position.character + indentation + match.index));
                         }
 
-                        writer.write(String.fromCharCode(charCode), Range.create(
-                            textDocument.positionAt(lineStart + match.index),
-                            textDocument.positionAt(lineStart + entityPattern.lastIndex)));
+                        writer.write(String.fromCharCode(charCode), SourceRange.create(
+                            source,
+                            position.line, position.character + indentation + match.index,
+                            position.line, position.character + indentation + entityPattern.lastIndex));
                     }
                     else {
-                        writer.write(line.slice(lastIndex, entityPattern.lastIndex), Range.create(
-                            textDocument.positionAt(lineStart + lastIndex),
-                            textDocument.positionAt(lineStart + entityPattern.lastIndex)));
+                        writer.write(line.slice(lastIndex, entityPattern.lastIndex), SourceRange.create(
+                            source,
+                            position.line, position.character + indentation + lastIndex,
+                            position.line, position.character + indentation + entityPattern.lastIndex));
                     }
 
                     lastIndex = entityPattern.lastIndex;
                 }
 
-                writer.write(line.slice(lastIndex), Range.create(
-                    textDocument.positionAt(lineStart + lastIndex),
-                    textDocument.positionAt(lineEnd)));
+                writer.write(line.slice(lastIndex), SourceRange.create(
+                    source,
+                    position.line, position.character + indentation + lastIndex,
+                    position.line, position.character + indentation + (lineEnd - lineStart)));
             }
         }
 
@@ -90,75 +89,17 @@ export function extractContent(textDocument: TextDocument | TextDocumentWithSour
 
     // merge source maps
     if (TextDocumentWithSourceMap.is(textDocument)) {
-        sourceMap.applySourceMap(textDocument.sourceMap, source);
+        sourceMap.applySourceMap(textDocument.sourceMap);
     }
 
-    return TextDocumentWithSourceMap.create(source, textDocument.languageId, textDocument.version, writer.toString(), sourceMap);
+    return TextDocumentWithSourceMap.create(uri, languageId, version, writer.toString(), sourceMap);
 }
-
-export function hasAttribute(node: ASTNode, name: string) {
-    return !!node.attrs && !!node.attrs.find(attr => attr.name === name);
-}
-
-export function getAttribute(node: ASTNode, name: string) {
-    const attr = node.attrs && node.attrs.find(attr => attr.name === name);
-    return attr ? attr.value : undefined;
-}
-
-export function hierarchy(node: ASTNode) {
-    return Query.hierarchy(node, ASTNodeHierarchy);
-}
-
-// /** Decode HTML */
-// export function decodeHTML(textDocument: TextDocument | TextDocumentWithSourceMap) {
-//     let match: RegExpMatchArray;
-//     let lastOffset = 0;
-
-//     const sourceText = textDocument.getText();
-//     const source = textDocument.uri;
-//     const sourceMap = new SourceMapGenerator({ file: source });
-//     const writer = new StringWriter({ sourceMap, source });
-//     entityPattern.lastIndex = -1;
-//     while (match = entityPattern.exec(sourceText)) {
-//         let [, name, dec, hex] = match;
-//         const charCode = name
-//             ? entities.hasOwnProperty(name) ? entities[name] : NaN
-//             : dec ? parseInt(dec) : parseInt(hex, 16);
-//         if (!isNaN(charCode)) {
-//             if (match.index > lastOffset) {
-//                 writer.write(sourceText.slice(lastOffset, match.index), Range.create(textDocument.positionAt(lastOffset), textDocument.positionAt(match.index)));
-//             }
-//             writer.write(String.fromCharCode(charCode), Range.create(textDocument.positionAt(match.index), textDocument.positionAt(entityPattern.lastIndex)));
-//         }
-//         else {
-//             writer.write(sourceText.slice(lastOffset, entityPattern.lastIndex), Range.create(textDocument.positionAt(lastOffset), textDocument.positionAt(entityPattern.lastIndex)));
-//         }
-//         lastOffset = entityPattern.lastIndex;
-//     }
-
-//     writer.write(sourceText.slice(lastOffset), Range.create(textDocument.positionAt(lastOffset), textDocument.positionAt(sourceText.length)));
-
-//     // merge source maps
-//     if (TextDocumentWithSourceMap.is(textDocument)) {
-//         sourceMap.applySourceMap(textDocument.sourceMap, source);
-//     }
-
-//     return TextDocumentWithSourceMap.create(source, textDocument.languageId, textDocument.version, writer.toString(), sourceMap);
-// }
 
 function minPosition(left: Position, right: Position) {
     return comparePositions(left, right) <= 0 ? left : right;
 }
 
-function comparePositions(left: Position, right: Position) {
-    if (left.line < right.line) return -1;
-    if (left.line > right.line) return +1;
-    if (left.character < right.character) return -1;
-    if (left.character > right.character) return +1;
-    return 0;
-}
-
-function getIndentation(text: string) {
+function guessIndentation(text: string) {
     const lines = text.split(newLinePattern);
     let indentation = -1;
     for (const line of lines) {

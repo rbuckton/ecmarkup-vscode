@@ -9,3 +9,5 @@ node_modules/@types/**/*
 src
 src/**/*
 gulpfile.js
+**/*.map
+**/*.d.ts

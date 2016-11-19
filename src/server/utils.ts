@@ -1,4 +1,4 @@
-import { Position } from "vscode-languageserver";
+import { IConnection, Range, Position, DidChangeConfigurationParams } from "vscode-languageserver";
 import { SourcePosition } from "./sourceMap";
 import * as url from "url";
 import * as path from "path";
@@ -138,29 +138,31 @@ export class ArraySet<T> {
     }
 }
 
-export class SortedList<T> {
-    private _values: T[];
-    private _comparison: (x: T, y: T) => number;
+export class SortedList<V, K> {
+    private _values: V[];
+    private _keySelector: (x: V) => K;
+    private _keyComparer: (x: K, y: K) => number;
 
-    constructor();
-    constructor(values: T[]);
-    constructor(comparison: (x: T, y: T) => number);
-    constructor(values: T[], comparison: (x: T, y: T) => number);
-    constructor(valuesOrComparison?: T[] | ((x: T, y: T) => number), relationalComparison?: (x: T, y: T) => number) {
-        this._values = Array.isArray(valuesOrComparison) ? valuesOrComparison : [];
-        this._comparison = Is.isFunction(valuesOrComparison) ? valuesOrComparison : relationalComparison || compareValues;
+    constructor(keySelector: (x: V) => K, keyComparer: (x: K, y: K) => number) {
+        this._values = [];
+        this._keySelector = keySelector;
+        this._keyComparer = keyComparer;
     }
 
     public get size() {
         return this._values.length;
     }
 
-    public has(value: T) {
-        return binarySearch(this._values, value, this._comparison) >= 0;
+    public has(value: V) {
+        return this.indexOf(value) >= 0;
     }
 
-    public add(value: T) {
-        const index = binarySearch(this._values, value, this._comparison);
+    public hasKey(key: K) {
+        return this.indexOfKeyCore(key) >= 0;
+    }
+
+    public add(value: V) {
+        const index = this.indexOfKeyCore(this._keySelector(value));
         insert(this._values, value, index < 0 ? ~index : index + 1);
     }
 
@@ -168,13 +170,39 @@ export class SortedList<T> {
         return this._values[index];
     }
 
-    public indexOf(value: T) {
-        const index = binarySearch(this._values, value, this._comparison);
+    public valueFor(key: K) {
+        const index = this.indexOfKeyCore(key);
+        return index >= 0 ? this._values[index] : undefined;
+    }
+
+    public indexOf(value: V) {
+        const key = this._keySelector(value);
+        const index = this.indexOfKeyCore(key);
+        if (index >= 0) {
+            for (let i = index; i < this._values.length; i++) {
+                if (this._values[i] === value) {
+                    return i;
+                }
+
+                if (this._keySelector(this._values[i]) !== key) {
+                    break;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public indexOfKey(key: K) {
+        const index = this.indexOfKeyCore(key);
         return index < 0 ? -1 : index;
     }
 
-    public delete(value: T) {
-        return removeAt(this._values, binarySearch(this._values, value, this._comparison));
+    public delete(value: V) {
+        return removeAt(this._values, this.indexOf(value));
+    }
+
+    public deleteKey(key: K) {
+        return removeAt(this._values, this.indexOfKeyCore(key));
     }
 
     public deleteAt(index: number) {
@@ -195,6 +223,68 @@ export class SortedList<T> {
 
     public toString() {
         return this._values.join();
+    }
+
+    private indexOfKeyCore(key: K) {
+        return binarySearch(this._values, key, this._keyComparer, this._keySelector);
+    }
+}
+
+export class Stack<T> {
+    private _top: T | undefined = undefined;
+    private _stack: T[] | undefined = undefined;
+    private _size: number = 0;
+
+    constructor(values?: T[]) {
+        if (values) {
+            for (const value of values) {
+                this.push(value);
+            }
+        }
+    }
+
+    public get size() { return this._size; }
+
+    public push(value: T) {
+        if (this._size > 0) {
+            if (this._stack === undefined) {
+                this._stack = [this._top];
+            }
+            else {
+                this._stack.push(this._top);
+            }
+        }
+
+        this._top = value;
+        this._size++;
+        return this._size;
+    }
+
+    public peek(offset: number = 0): T | undefined {
+        if (this._size === 0) return undefined;
+        if (offset >= this._size) return undefined;
+        if (offset === 0) return this._top;
+        return this._stack ? this._stack[this._size - offset - 1] : undefined;
+    }
+
+    public pop(): T | undefined {
+        if (this._size === 0) return undefined;
+        const value = this._top;
+        this._top = this._size > 1 && this._stack !== undefined ? this._stack.pop() : undefined;
+        this._size--;
+        return value;
+    }
+
+    public clear() {
+        this._top = undefined;
+        this._stack = undefined;
+        this._size = 0;
+    }
+
+    public toArray(): T[] {
+        if (this._size === 0) return [];
+        if (this._size > 1 && this._stack) return [...this._stack, this._top];
+        return [this._top];
     }
 }
 
@@ -220,13 +310,16 @@ function removeAt<T>(array: T[], index: number) {
     return false;
 }
 
-export function binarySearch<T>(array: T[], value: T, comparison: (x: T, y: T) => number = compareValues): number {
+export function binarySearch<T>(array: T[], value: T, comparer?: (x: T, y: T) => number): number;
+export function binarySearch<T, K>(array: T[], key: K, keyComparer: (x: K, y: K) => number, keySelector: (x: T) => K): number;
+export function binarySearch<T, K>(array: T[], key: K, keyComparer: (x: K, y: K) => number = compareValues, keySelector: (x: T) => K = identity): number {
     let low = 0;
     let high = array.length - 1;
     while (low <= high) {
         const middle = low + ((high - low) >> 1);
         const midValue = array[middle];
-        const res = comparison(midValue, value);
+        const midKey = keySelector(midValue);
+        const res = keyComparer(midKey, key);
         if (res === 0) {
             return middle;
         }
@@ -240,8 +333,20 @@ export function binarySearch<T>(array: T[], value: T, comparison: (x: T, y: T) =
     return ~low;
 }
 
+function identity<T>(value: T) {
+    return value;
+}
+
 export function compareValues<T>(x: T, y: T) {
     return x > y ? +1 : x < y ? -1 : 0;
+}
+
+export function formatPosition(x: Position) {
+    return `${x.line + 1}:${x.character + 1}`;
+}
+
+export function formatRange(x: Range) {
+    return `${formatPosition(x.start)}:${formatPosition(x.end)}`;
 }
 
 export function comparePositions(x: Position, y: Position) {
@@ -288,4 +393,130 @@ export function normalizeSlashes(text: string) {
 
 export function ensureTrailingSeparator(text: string) {
     return /[\\/]$/.test(text) ? text : text + "/";
+}
+
+export const enum TraceLevel {
+    off,
+    error,
+    warning,
+    info,
+    verbose
+}
+
+function toTraceLevel(text: string) {
+    switch (text) {
+        case "0":
+        case "off": return TraceLevel.off;
+        case "1":
+        case "error": return TraceLevel.error;
+        case "2":
+        case "warning": return TraceLevel.warning;
+        case "3":
+        case "info": return TraceLevel.info;
+        case "4":
+        case "verbose": return TraceLevel.verbose;
+    }
+}
+
+export class TraceSwitch {
+    private static connection: IConnection;
+    private static switches = new Map<string, number>();
+    private _name: string;
+    private _enabled: boolean;
+
+    constructor(name: string, enabled = true) {
+        this._name = name;
+        this._enabled = enabled;
+    }
+
+    get name() { return this._name; }
+    get enabled() { return this._enabled; }
+
+    static shouldTrace(name: string, level: TraceLevel) {
+        if (this.switches.has(name)) {
+            return this.switches.get(name) >= level;
+        }
+        if (this.switches.has("server")) {
+            return this.switches.get("server") >= level;
+        }
+        if (this.switches.has("all")) {
+            return this.switches.get("all") >= level;
+        }
+        return false;
+    }
+
+    static listen(connection: IConnection) {
+        if (!this.connection) {
+            this.connection = connection;
+            this.connection.onDidChangeConfiguration(params => this.onDidChangeConfiguration(params));
+        }
+    }
+
+    static setTraceLevel(name: string, level: TraceLevel) {
+        if (name === "none") return;
+        this.switches.set(name, level);
+    }
+
+    private static onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
+        this.switches.clear();
+
+        const trace = settings.ecmarkup.trace;
+        if (typeof trace === "string") {
+            this.setTraceLevel(trace, TraceLevel.verbose);
+        }
+        else if (Array.isArray(trace)) {
+            for (const name of trace) {
+                this.setTraceLevel(name, TraceLevel.verbose);
+            }
+        }
+        else if (typeof trace === "object") {
+            for (const key of Object.keys(trace)) {
+                const level = trace[key];
+                if (typeof level === "number") {
+                    this.setTraceLevel(key, level);
+                }
+                else if (typeof level === "string") {
+                    this.setTraceLevel(key, toTraceLevel(level));
+                }
+            }
+        }
+    }
+
+    shouldTrace(level: TraceLevel) {
+        return this.enabled
+            && !!TraceSwitch.connection
+            && TraceSwitch.shouldTrace(this.name, level);
+    }
+
+    log(message: string) {
+        console.log(`${this.name}: ${message}`);
+        if (this.shouldTrace(TraceLevel.verbose)) {
+            TraceSwitch.connection.console.log(`${this.name}: ${message}`);
+        }
+    }
+
+    info(message: string) {
+        console.info(`${this.name}: ${message}`);
+        if (this.shouldTrace(TraceLevel.info)) {
+            TraceSwitch.connection.console.info(`${this.name}: ${message}`);
+        }
+    }
+
+    warn(message: string) {
+        console.warn(`${this.name}: ${message}`);
+        if (this.shouldTrace(TraceLevel.warning)) {
+            TraceSwitch.connection.console.warn(`${this.name}: ${message}`);
+        }
+    }
+
+    error(message: string) {
+        console.error(`${this.name}: ${message}`);
+        if (this.shouldTrace(TraceLevel.error)) {
+            TraceSwitch.connection.console.error(`${this.name}: ${message}`);
+        }
+    }
+}
+
+if (process.env.EMU_TRACE) {
+    TraceSwitch.setTraceLevel(process.env.EMU_TRACE, toTraceLevel(process.env.EMU_TRACE_LEVEL || "verbose"));
 }

@@ -142,7 +142,12 @@
           "description": "A list of URLs or local paths to CSS style sheets to use from the ecmarkup preview."
         },
         "ecmarkup.trace": {
-          "type": "string",
+          "type": ["string", "array", "object"],
+          "items": { "type": "string" },
+          "additionalProperties": {
+            "type": ["number", "string"],
+            "enum": [0, "off", 1, "error", 2, "warning", 3, "info", 4, "verbose"]
+          },
           "default": "none",
           "description": "Enabled diagnostic tracing for the extension. One of 'none', 'client', 'server', 'all'."
         }

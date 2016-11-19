@@ -10,25 +10,22 @@ declare module "vscode" {
 }
 
 const previewDelay = 300; // ms
-
-export namespace scheme {
-    export const preview = "ecmarkup-preview";
-}
+const previewScheme = "ecmarkup-preview";
 
 export function activate(context: ExtensionContext) {
     const module = context.asAbsolutePath("out/server/index.js");
     const transport = TransportKind.ipc;
-    const options: ForkOptions = { execArgv: ["--nolazy", "--debug=6005"] };
+    const options: ForkOptions = { execArgv: ["--nolazy", "--debug=6005"], env: { "EMU_TRACE": "server" } };
     const run: NodeModule = { module, transport };
     const debug: NodeModule = { module, transport, options };
     const serverOptions: ServerOptions = { run, debug };
     const clientOptions: LanguageClientOptions = { documentSelector: ["ecmarkup"], synchronize: { configurationSection: "ecmarkup" } };
     const client = new LanguageClient("ECMArkup Language Client", serverOptions, clientOptions);
-    const provider = new EcmarkupDocumentContentProvider(context, client);
+    const provider = new EcmarkupDocumentContentProvider(context);
 
     context.subscriptions.push(
         client.start(),
-        workspace.registerTextDocumentContentProvider("ecmarkup-preview", provider),
+        workspace.registerTextDocumentContentProvider(previewScheme, provider),
         commands.registerCommand("ecmarkup.showPreview", uri => showPreview(uri, /*showToSide*/ false)),
         commands.registerCommand("ecmarkup.showPreviewToSide", uri => showPreview(uri, /*showToSide*/ true)),
         commands.registerCommand("ecmarkup.showSource", uri => showSource(uri)));
@@ -59,15 +56,15 @@ export function isEcmarkupDocument(document: TextDocument) {
 }
 
 export function isEcmarkupPreviewUri(uri: Uri) {
-    return uri.scheme === "ecmarkup-preview";
+    return uri.scheme === previewScheme;
 }
 
 export function getEcmarkupPreviewUri(uri: Uri) {
-    return uri.scheme === "ecmarkup-preview" ? uri : uri.with({ scheme: "ecmarkup-preview", path: uri.path + ".rendered", query: uri.toString() });
+    return uri.scheme === previewScheme ? uri : uri.with({ scheme: previewScheme, path: uri.path + ".rendered", query: uri.toString() });
 }
 
 export function getEcmarkupSourceUri(uri: Uri) {
-    return uri.scheme === "ecmarkup-preview" ? Uri.parse(uri.query) : uri;
+    return uri.scheme === previewScheme ? Uri.parse(uri.query) : uri;
 }
 
 export function showPreview(uri?: Uri, showToSide = false): void | PromiseLike<{}> {
@@ -115,15 +112,12 @@ function getViewColumn(showToSide: boolean) {
 
 class EcmarkupDocumentContentProvider implements TextDocumentContentProvider {
     private _context: ExtensionContext;
-    private _client: LanguageClient;
-    private _cts: CancellationTokenSource;
     private _onDidChange = new EventEmitter<Uri>();
     private _pendingUpdateRequests = new Set<string>();
     private _pendingUpdates = new Map<string, CancellationTokenSource>();
 
-    constructor(context: ExtensionContext, client: LanguageClient) {
+    constructor(context: ExtensionContext) {
         this._context = context;
-        this._client = client;
     }
 
     public get onDidChange() { return this._onDidChange.event; }
