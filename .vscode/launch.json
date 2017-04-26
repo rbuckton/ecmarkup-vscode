@@ -10,7 +10,7 @@
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
             "stopOnEntry": false,
             "sourceMaps": true,
-            "outDir": "${workspaceRoot}/out/client",
+            "outFiles": ["${workspaceRoot}/out/client/**/*"],
             "preLaunchTask": "build"
 		},
 		{
@@ -22,7 +22,7 @@
 			"args": [],
             "stopOnEntry": false,
             "sourceMaps": true,
-			"outDir": "${workspaceRoot}/out/server",
+			"outFiles": ["${workspaceRoot}/out/server/**/*"],
             "preLaunchTask": "server"
 		}
     ]
