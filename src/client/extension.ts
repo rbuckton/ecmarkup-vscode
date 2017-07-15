@@ -70,23 +70,24 @@ export function getEcmarkupSourceUri(uri: Uri) {
     return uri.scheme === "ecmarkup-preview" ? Uri.parse(uri.query) : uri;
 }
 
-export function showPreview(uri?: Uri, showToSide = false): void | PromiseLike<{}> {
+export async function showPreview(uri?: Uri, showToSide = false): Promise<void> {
     if (!uri && window.activeTextEditor) {
         uri = window.activeTextEditor.document.uri;
     }
     if (!uri && !window.activeTextEditor) {
-        return commands.executeCommand("ecmarkup.showSource");
+        await commands.executeCommand("ecmarkup.showSource");
+        return;
     }
     if (!uri || isEcmarkupPreviewUri(uri)) {
         return;
     }
-    return commands.executeCommand("vscode.previewHtml",
+    await commands.executeCommand("vscode.previewHtml",
         getEcmarkupPreviewUri(uri),
         getViewColumn(showToSide),
         "HTML Preview (ecmarkup)");
 }
 
-export function showSource(uri: Uri): void | PromiseLike<{}> {
+export async function showSource(uri: Uri): Promise<void> {
     if (!uri || !isEcmarkupPreviewUri(uri)) {
         return;
     }
@@ -94,11 +95,13 @@ export function showSource(uri: Uri): void | PromiseLike<{}> {
     const sourceUri = getEcmarkupSourceUri(uri);
     for (const editor of window.visibleTextEditors) {
         if (editor.document.uri.toString() === sourceUri.toString()) {
-            return window.showTextDocument(editor.document, editor.viewColumn);
+            await window.showTextDocument(editor.document, editor.viewColumn);
+            return;
         }
     }
 
-    return workspace.openTextDocument(sourceUri).then(doc => window.showTextDocument(doc));
+    const doc = await workspace.openTextDocument(sourceUri);
+    await window.showTextDocument(doc);
 }
 
 function getViewColumn(showToSide: boolean) {
@@ -128,7 +131,7 @@ class EcmarkupDocumentContentProvider implements TextDocumentContentProvider {
 
     public get onDidChange() { return this._onDidChange.event; }
 
-    public provideTextDocumentContent(uri: Uri): string | PromiseLike<string> {
+    public async provideTextDocumentContent(uri: Uri): Promise<string> {
         const key = uri.toString();
         if (this._pendingUpdates.has(key)) {
             const cts = this._pendingUpdates.get(key);
@@ -138,39 +141,36 @@ class EcmarkupDocumentContentProvider implements TextDocumentContentProvider {
         const cts = new CancellationTokenSource();
         this._pendingUpdates.set(key, cts);
 
-        return workspace
-            .openTextDocument(getEcmarkupSourceUri(uri))
-            .then(document => {
-                const fetch = (file: string, token: CancellationToken) => {
-                    return new Promise<string>((resolve, reject) => {
-                        token.throwIfCancellationRequested();
-                        if (file === document.fileName) {
-                            resolve(document.getText());
-                            return;
-                        }
-                        fs.readFile(file, "utf8", (err, data) => err ? reject(err) : resolve(data));
-                    });
-                };
-                return build(document.fileName, <any>fetch, { copyright: false, toc: false }, <any>cts.token)
-                    .then(spec => {
-                        if (this._pendingUpdates.get(key) === cts) {
-                            this._pendingUpdates.delete(key);
-                        }
-
-                        const doc = (<any>spec).doc as HTMLDocument;
-                        doc.head.insertAdjacentHTML("afterBegin", `<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />`);
-                        doc.head.insertAdjacentHTML("beforeEnd", `<link rel="stylesheet" href="${require.resolve("ecmarkup/css/elements.css")}" />`);
-                        doc.head.insertAdjacentHTML("beforeEnd", `<link rel="stylesheet" href="${require.resolve("../../resources/preview.css")}" />`);
-                        const styles = workspace.getConfiguration("ecmarkup")["styles"];
-                        if (styles && Array.isArray(styles) && styles.length > 0) {
-                            for (const style of styles) {
-                                doc.head.insertAdjacentHTML("beforeEnd", `<link rel="stylesheet" href="${this.resolveUri(document.uri, style)}" media="screen" />`);
-                            }
-                        }
-                        doc.head.insertAdjacentHTML("beforeEnd", `<base href="${document.uri.toString(true)}" />`);
-                        return spec.toHTML();
-                    });
+        const document = await workspace.openTextDocument(getEcmarkupSourceUri(uri));
+        const fetch = (file: string, token: CancellationToken) => {
+            return new Promise<string>((resolve, reject) => {
+                token.throwIfCancellationRequested();
+                if (file === document.fileName) {
+                    resolve(document.getText());
+                    return;
+                }
+                fs.readFile(file, "utf8", (err, data) => err ? reject(err) : resolve(data));
             });
+        };
+
+        const spec = await build(document.fileName, <any>fetch, { copyright: false, toc: false }, cts.token);
+        if (this._pendingUpdates.get(key) === cts) {
+            this._pendingUpdates.delete(key);
+        }
+
+        const doc = (<any>spec).doc as HTMLDocument;
+        doc.head.insertAdjacentHTML("afterbegin", `<meta http-equiv="Content-type" content="text/html;charset=UTF-8" />`);
+        doc.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="${require.resolve("ecmarkup/css/elements.css")}" />`);
+        doc.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="${require.resolve("../../resources/preview.css")}" />`);
+        const styles = workspace.getConfiguration("ecmarkup")["styles"];
+        if (styles && Array.isArray(styles) && styles.length > 0) {
+            for (const style of styles) {
+                doc.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="${this.resolveUri(document.uri, style)}" media="screen" />`);
+            }
+        }
+
+        doc.head.insertAdjacentHTML("beforeend", `<base href="${document.uri.toString(true)}" />`);
+        return spec.toHTML();
     }
 
     public update(uri: Uri) {

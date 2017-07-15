@@ -1,9 +1,11 @@
 import { IConnection, TextDocument, TextDocuments, InitializeParams, InitializeResult, TextDocumentChangeEvent, TextDocumentPositionParams, Definition, ReferenceParams, Location, Range, Diagnostic, DiagnosticSeverity, DidChangeConfigurationParams } from "vscode-languageserver";
 import { TextDocumentWithSourceMap } from "./textDocument";
 import { SourcePosition, Bias } from "./sourceMap";
-import { DocumentManager, SpecDocument, GrammarDocument } from "./documents";
-import * as utils from "./utils";
+import { DocumentManager } from "./documents/documentManager";
+import { SpecDocument } from "./documents/specDocument";
+import { GrammarDocument } from "./documents/grammarDocument";
 import * as gmd from "grammarkdown";
+import * as utils from "./utils";
 
 export class Server {
     private connection: IConnection;

@@ -1,29 +1,29 @@
 // A launch configuration that compiles the extension and then opens it inside a new window
 {
-	"version": "0.1.0",
-	"configurations": [
-		{
-			"name": "Launch Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Launch Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": ["--extensionDevelopmentPath=${workspaceRoot}"],
             "stopOnEntry": false,
             "sourceMaps": true,
             "outFiles": ["${workspaceRoot}/out/client/**/*"],
             "preLaunchTask": "build"
-		},
-		{
-			"name": "Launch Server",
-			"type": "node",
-			"request": "launch",
-			"program": "${workspaceRoot}/out/server/server.js",
-			"cwd": "${workspaceRoot}",
-			"args": [],
+        },
+        {
+            "name": "Launch Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceRoot}/out/server/server.js",
+            "cwd": "${workspaceRoot}",
+            "args": [],
             "stopOnEntry": false,
             "sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/out/server/**/*"],
+            "outFiles": ["${workspaceRoot}/out/server/**/*"],
             "preLaunchTask": "server"
-		}
+        }
     ]
 }
