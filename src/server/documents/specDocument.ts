@@ -9,10 +9,23 @@ import { parseSpec } from "../parser";
 import * as utils from "../utils";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 
+const specsDir = path.join(__dirname, "../../../specs");
 const knownSpecs = new Map<string, string>();
-knownSpecs.set("es6", path.join(__dirname, "../../../specs/es2015.spec.html"));
-knownSpecs.set("es2015", path.join(__dirname, "../../../specs/es2015.spec.html"));
+knownSpecs.set("es6", path.join(specsDir, "es2015/spec.html"));
+knownSpecs.set("es2015", path.join(specsDir, "es2015/spec.html"));
+knownSpecs.set("es2016", path.join(specsDir, "es2016/spec.html"));
+knownSpecs.set("es2017", path.join(specsDir, "es2017/spec.html"));
+
+const esSpecRegExp = /^es\d{4}$/i;
+function resolveSpec(href: string) {
+    const knownSpec = knownSpecs.get(href);
+    if (knownSpec) return knownSpec;
+    if (href === "esnext") return `https://github.com/tc39/ecma262/raw/master/spec.html`;
+    if (esSpecRegExp.test(href)) return `https://github.com/tc39/ecma262/raw/${href}/spec.html`;
+    return href
+}
 
 export class SpecDocument extends DocumentBase {
     private _textDocument: TextDocument;
@@ -90,7 +103,6 @@ export class SpecDocument extends DocumentBase {
             this.documentManager.grammarDocuments.addOrUpdate(this.uri, this);
 
             // parse imports
-            const resolveSpec = (href: string) => knownSpecs.has(href) ? knownSpecs.get(href) : href;
             const getDocument = (rel: string, href: string) =>
                 rel === "spec" ? this.documentManager.specDocuments.get(utils.toUrl(resolveSpec(href), this.uri)) :
                 rel === "grammar" ? this.documentManager.grammarDocuments.get(utils.toUrl(href, this.uri)) :

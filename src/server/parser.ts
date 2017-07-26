@@ -27,6 +27,12 @@ export interface Link {
 }
 
 export function parseSpec(textDocument: TextDocument): ParseSpecResult {
+    interface GrammarFragment {
+        mode: "strict" | "relaxed" | undefined;
+        namespace: string;
+        document: TextDocumentWithSourceMap;
+    }
+
     const tokenizer = new Tokenizer({ locationInfo: true });
     const parserFeedbackSimulator = new ParserFeedbackSimulator(tokenizer);
     tokenizer.write(textDocument.getText(), true);
@@ -39,10 +45,18 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
     let metadataStartOffset = -1;
     let metadataEndOffset = -1;
 
-    const grammarFragments: TextDocumentWithSourceMap[] = [];
-    let grammarStrict: boolean;
+    const emuNamespaces: string[] = [];
+    let emuNamespace: string | undefined;
+
+    const grammarFragments: GrammarFragment[] = [];
+    let grammarStrictMode: "strict" | "relaxed" | undefined;
     let grammarStartOffset = -1;
     let grammarEndOffset = -1;
+
+    // infer default strictness
+    // if (/\/ecmarkdown-vscode\/specs\//.test(textDocument.uri)) {
+    //     grammarStrictMode = true;
+    // }
 
     let mode = htmlMode;
     let token: Tokenizer.Token;
@@ -52,7 +66,11 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
     }
     while (token.type !== Tokenizer.EOF_TOKEN);
 
-    const grammarDocument = TextDocumentWithSourceMap.concat(textDocument.uri, "grammarkdown", textDocument.version, grammarFragments);
+    const fragments = grammarFragments
+        .filter(fragment => (fragment.mode || metadataGrammar) === "strict")
+        .map(fragment => fragment.document);
+
+    const grammarDocument = TextDocumentWithSourceMap.concat(textDocument.uri, "grammarkdown", textDocument.version, fragments);
 
     return { links, metadata, metadataDocument, grammarDocument };
 
@@ -68,8 +86,18 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
                             }
                             break;
 
+                        case "emu-clause":
+                        case "emu-intro":
+                        case "emu-annex":
+                            emuNamespaces.push(emuNamespace);
+                            const clauseNamespace = Tokenizer.getTokenAttr(token, "namespace");
+                            if (typeof clauseNamespace === "string") {
+                                emuNamespace = clauseNamespace;
+                            }
+                            break;
+
                         case "emu-grammar":
-                            grammarStrict = isStrictModeGrammar(token);
+                            grammarStrictMode = getGrammarMode(token);
                             grammarStartOffset = token.location.endOffset;
                             mode = grammarMode;
                             break;
@@ -80,6 +108,17 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
                             if ((rel === "spec" || rel === "grammar") && href) {
                                 links.push({ rel, href, location: token.location });
                             }
+                            break;
+                    }
+                }
+                break;
+            case Tokenizer.END_TAG_TOKEN:
+                if (ns === NS.HTML) {
+                    switch (token.tagName) {
+                        case "emu-clause":
+                        case "emu-intro":
+                        case "emu-annex":
+                            emuNamespace = emuNamespaces.pop();
                             break;
                     }
                 }
@@ -141,10 +180,11 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
                 return; // consume tag;
         }
 
-        // only parse/check strict grammars.
-        if (grammarStrict) {
-            grammarFragments.push(extractContent(textDocument, grammarStartOffset, grammarEndOffset));
-        }
+        grammarFragments.push({
+            mode: grammarStrictMode,
+            namespace: emuNamespace,
+            document: extractContent(textDocument, grammarStartOffset, grammarEndOffset)
+        });
 
         grammarStartOffset = -1;
         grammarEndOffset = -1;
@@ -152,10 +192,10 @@ export function parseSpec(textDocument: TextDocument): ParseSpecResult {
         mode(token, ns);
     }
 
-    function isStrictModeGrammar(token: Tokenizer.StartTagToken) {
-        return metadataGrammar === "strict"
-            ? Tokenizer.getTokenAttr(token, "relaxed") === null
-            : Tokenizer.getTokenAttr(token, "strict") !== null;
+    function getGrammarMode(token: Tokenizer.StartTagToken) {
+        if (Tokenizer.getTokenAttr(token, "relaxed") !== null) return "relaxed";
+        if (Tokenizer.getTokenAttr(token, "strict") !== null) return "strict";
+        return undefined;
     }
 
     function shouldExitGrammarMode(tagName: string, ns: string) {

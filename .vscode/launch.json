@@ -1,6 +1,6 @@
 // A launch configuration that compiles the extension and then opens it inside a new window
 {
-    "version": "0.1.0",
+    "version": "0.2.0",
     "configurations": [
         {
             "name": "Launch Extension",
@@ -14,16 +14,12 @@
             "preLaunchTask": "build"
         },
         {
-            "name": "Launch Server",
+            "name": "Attach Server",
             "type": "node",
-            "request": "launch",
-            "program": "${workspaceRoot}/out/server/server.js",
-            "cwd": "${workspaceRoot}",
-            "args": [],
-            "stopOnEntry": false,
+            "request": "attach",
+            "port": 6005,
             "sourceMaps": true,
-            "outFiles": ["${workspaceRoot}/out/server/**/*"],
-            "preLaunchTask": "server"
+            "outFiles": ["${workspaceRoot}/out/server/**/*"]
         }
     ]
 }

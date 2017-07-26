@@ -64,8 +64,8 @@ export class SpecDocuments extends EventEmitter {
 
     public on(event: "documentAdded", cb: (document: SpecDocument) => void): this;
     public on(event: "documentDeleted", cb: (document: SpecDocument) => void): this;
-    public on(event: string, cb: Function): this;
-    public on(event: string, cb: Function) {
+    public on(event: string, cb: (...args) => void): this;
+    public on(event: string, cb: (...args) => void) {
         super.on(event, cb);
         return this;
     }

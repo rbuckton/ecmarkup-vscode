@@ -51,7 +51,7 @@ export class Server {
         this.traceLevel = settings.ecmarkup.trace || "none";
     }
 
-    private onDidChangeContent({ document }: TextDocumentChangeEvent) {
+    public onDidChangeContent({ document }: TextDocumentChangeEvent) {
         try {
             const specDocument = this.documentManager.specDocuments.addOrUpdate(document.uri, document);
             if (!specDocument.ready) {

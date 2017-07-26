@@ -93,8 +93,8 @@ export class WebRequest extends EventEmitter {
     public on(event: "response", cb: (response: WebResponse) => void): this;
     public on(event: "abort", cb: () => void): this;
     public on(event: "error", cb: (error: any) => void): this;
-    public on(event: string, cb: Function): this;
-    public on(event: string, cb: Function) {
+    public on(event: string, cb: (...args) => void): this;
+    public on(event: string, cb: (...args) => void) {
         super.on(event, cb);
         return this;
     }
@@ -171,7 +171,7 @@ export class WebRequest extends EventEmitter {
 
     private _handleResponse(response: http.IncomingMessage) {
         if (this._isRedirectStatusCode(response) && this._mayFollowRedirect(response)) {
-            this._beginRequest("GET", response.headers["location"]);
+            this._beginRequest("GET", <string>response.headers["location"]);
         }
         else if (this._isNotModifiedStatusCode(response) && this._mayUseCache() && cache.has(this._url)) {
             this._respond(new CachedWebResponse(cache.get(this._url)));

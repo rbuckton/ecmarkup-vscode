@@ -65,8 +65,8 @@ export class GrammarDocuments extends EventEmitter {
 
     public on(event: "documentAdded", cb: (document: GrammarDocument) => void): this;
     public on(event: "documentDeleted", cb: (document: GrammarDocument) => void): this;
-    public on(event: string, cb: Function): this;
-    public on(event: string, cb: Function) {
+    public on(event: string, cb: (...args) => void): this;
+    public on(event: string, cb: (...args) => void) {
         super.on(event, cb);
         return this;
     }
