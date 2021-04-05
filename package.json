@@ -181,6 +181,6 @@
     "vscode-languageserver": "2.2.1"
   },
   "extensionDependencies": [
-    "rbuckton.grammarkdown-language"
+    "rbuckton.grammarkdown-vscode"
   ]
 }
